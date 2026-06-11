@@ -5,8 +5,6 @@
 #include <imgui.h>
 #include <imgui_raii.h>
 
-#include <whb/log.h>
-
 #include "DownloadThemePopup.h"
 #include "../DownloadManager.h"
 #include "../humanize.hpp"

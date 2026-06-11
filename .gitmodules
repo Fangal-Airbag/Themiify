@@ -10,3 +10,6 @@
 [submodule "external/libmocha"]
 	path = external/libmocha
 	url = https://github.com/wiiu-env/libmocha.git
+[submodule "external/wiiu-stdout"]
+	path = external/wiiu-stdout
+	url = https://github.com/dkosmari/wiiu-stdout.git

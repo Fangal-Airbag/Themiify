@@ -15,16 +15,16 @@
 #include <concepts>
 #include <filesystem>
 #include <functional>
+#include <iostream>
 #include <unordered_map>
 #include <optional>
+#include <print>
 #include <queue>
 #include <ranges>
 #include <span>
 #include <string>
 #include <thread>
 #include <vector>
-
-#include <whb/log.h>
 
 #include <curl/curl.h>
 #include <SDL2/SDL_image.h>
@@ -39,6 +39,9 @@
 #include "thread_safe.hpp"
 #include "tracer.hpp"
 
+using std::cout;
+using std::cerr;
+using std::endl;
 using namespace std::literals;
 
 namespace ImageLoader {
@@ -151,7 +154,7 @@ namespace ImageLoader {
 
         requests_queue.reset();
 
-        WHBLogPrintf("ImageLoader: launching worker thread.");
+        cout << "ImageLoader: launching worker thread." << endl;
         worker_thread = std::jthread{worker_func};
 
         assert((std::atomic<LoadState>{}.is_lock_free()));
@@ -159,15 +162,15 @@ namespace ImageLoader {
 
     void finalize()
     {
-        WHBLogPrintf("Stopping requests_queue");
+        cout << "Stopping requests_queue" << endl;
         requests_queue.stop();
 
-        WHBLogPrintf("Destroying thread");
+        cout << "Destroying thread" << endl;
         worker_thread = {};
-        WHBLogPrintf("Thread destroyed");
+        cout << "Thread destroyed" << endl;
 
         {
-            WHBLogPrintf("Clearing safe_cache");
+            cout << "Clearing safe_cache" << endl;
             auto cache = safe_cache.lock();
 
             for (auto& [location, entry] : *cache)
@@ -176,7 +179,7 @@ namespace ImageLoader {
             cache->clear();
         }
 
-        WHBLogPrintf("Destroying predefined icons");
+        cout << "Destroying predefined icons" << endl;
 
         if (loading_image) {
             SDL_DestroyTexture(loading_image);
@@ -247,7 +250,7 @@ namespace ImageLoader {
             return loading_image;
         }
         catch (std::exception& e) {
-            WHBLogPrintf("ERROR: ImageLoader::get(): %s", e.what());
+            cerr << "ERROR: ImageLoader::get(): " << e.what() << endl;
             return load_error_image;
         }
     }
@@ -274,8 +277,9 @@ namespace ImageLoader {
 
         LoadState expected = LoadState::requested;
         if (!entry.state.compare_exchange_strong(expected, LoadState::loading)) {
-            WHBLogPrintf("ERROR: ImageLoader::process_one_request() wrong cache entry state: %s",
-                         to_string(expected).c_str());
+            cerr << "ERROR: ImageLoader::process_one_request() wrong cache entry state: "
+                 << to_string(expected)
+                 << endl;
             return;
         }
 
@@ -321,10 +325,11 @@ namespace ImageLoader {
             }
         }
         catch (std::exception& e) {
-            WHBLogPrintf("ERROR: ImageLoader::process_one_request(): location=\"%s\", exception=%s",
-                         location.c_str(),
-                         e.what());
-
+            std::print(cerr,
+                       "ERROR: ImageLoader::process_one_request(): location=\"{}\", exception={}",
+                       location,
+                       e.what());
+            
             entry.state = LoadState::error;
         }
     }
@@ -421,7 +426,7 @@ namespace ImageLoader {
             auto* entry = find(cache, easy);
 
             if (!entry) {
-                WHBLogPrintf("ERROR: ImageLoader::handle_finished_downloads(): failed to find entry");
+                cerr << "ERROR: ImageLoader::handle_finished_downloads(): failed to find entry" << endl;
                 curl_multi_remove_handle(multi, easy);
                 curl_easy_cleanup(easy);
                 continue;
@@ -459,7 +464,7 @@ namespace ImageLoader {
                 entry->state = LoadState::loaded;
             }
             catch (std::exception& e) {
-                WHBLogPrintf("ERROR: ImageLoader::handle_finished_downloads(): %s", e.what());
+                cerr << "ERROR: ImageLoader::handle_finished_downloads(): " << e.what() << endl;
                 entry->state = LoadState::error;
             }
 
@@ -499,7 +504,7 @@ namespace ImageLoader {
                     break;
                 }
                 else if (location.error() == async_queue_error::locked) {
-                    WHBLogPrintf("WARNING: requests_queue was locked");
+                    cout << "WARNING: requests_queue was locked" << endl;
                 }
 
                 int running = 0;
@@ -512,7 +517,7 @@ namespace ImageLoader {
             }
         }
         catch (std::exception& e) {
-            WHBLogPrintf("ERROR: ImageLoader::worker_func(): %s", e.what());
+            cerr << "ERROR: ImageLoader::worker_func(): " << e.what() << endl;
         }
 
         if (multi) {

@@ -13,8 +13,6 @@
 #include <imgui_stdlib.h>
 #include <imgui_raii.h>
 
-#include <whb/log.h>
-
 #include "ThemeDetailsPopup.h"
 #include "ThemePreviewPopup.h"
 #include "../App.h"
@@ -25,6 +23,8 @@
 #include "../ThemezerAPI.h"
 #include "../tracer.hpp"
 
+using std::cout;
+using std::endl;
 using namespace std::literals;
 
 using ThemezerAPI::WiiuThemeFull;
@@ -53,7 +53,7 @@ namespace ThemeDetailsPopup {
         ThemezerAPI::wiiu::theme(hexId,
                                  [](const WiiuThemeFull& t)
                                  {
-                                    WHBLogPrintf("Got theme!");
+                                    cout << "Got theme!" << endl;
                                     theme = t;
                                     state = State::ready;
                                  });

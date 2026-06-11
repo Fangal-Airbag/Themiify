@@ -1,12 +1,11 @@
 #include <cassert>
+#include <iostream>
 #include <optional>
 #include <span>
 #include <map>
 #include <stdexcept>
 #include <memory>
 #include <string>
-
-#include <whb/log.h>
 
 #include <curl/curl.h>
 
@@ -16,6 +15,9 @@
 #include "byte_stream.hpp"
 #include "tracer.hpp"
 
+using std::cout;
+using std::cerr;
+using std::endl;
 using namespace std::literals;
 
 namespace graphql {
@@ -155,10 +157,10 @@ namespace graphql {
                 data_func(data);
         }
         catch (std::exception& e) {
-            WHBLogPrintf("ERROR: request::on_data(): %s", e.what());
+            cerr << "ERROR: request::on_data(): " << e.what() << endl;
         }
         catch (...) {
-            WHBLogPrintf("ERROR: request::on_data() caught an exception!");
+            cerr << "ERROR: request::on_data() caught an exception!" << endl;
         }
 
         void on_errors(const glz::generic& errors) noexcept
@@ -167,10 +169,10 @@ namespace graphql {
                 errors_func(errors);
         }
         catch (std::exception& e) {
-            WHBLogPrintf("ERROR: request::on_errors(): %s", e.what());
+            cerr << "ERROR: request::on_errors(): " << e.what() << endl;
         }
         catch (...) {
-            WHBLogPrintf("ERROR: request::on_errors() caught an exception!");
+            cerr << "ERROR: request::on_errors() caught an exception!" << endl;
         }
 
         void on_exception(const std::exception& ex) noexcept
@@ -179,10 +181,10 @@ namespace graphql {
                 exception_func(ex);
         }
         catch (std::exception& e) {
-            WHBLogPrintf("ERROR: request::on_exception(): %s", e.what());
+            cerr << "ERROR: request::on_exception(): " << e.what() << endl;
         }
         catch (...) {
-            WHBLogPrintf("ERROR: request::on_exception() caught an exception");
+            cerr << "ERROR: request::on_exception() caught an exception" << endl;
         }
     };
 
@@ -241,7 +243,7 @@ namespace graphql {
                 auto it = requests.find(id);
 
                 if (it == requests.end()) {
-                    WHBLogPrintf("BUG: finished an unknown handle!");
+                    cerr << "BUG: finished an unknown handle!" << endl;
                     continue;
                 }
 

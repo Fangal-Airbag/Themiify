@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <list>
 #include <memory>
 #include <optional>
@@ -20,14 +21,15 @@
 #include <string>
 #include <vector>
 
-#include <whb/log.h>
-
 #include <curl/curl.h>
 
 #include "DownloadManager.h"
 #include "screens/DownloadThemePopup.h"
 #include "tracer.hpp"
 
+using std::cout;
+using std::cerr;
+using std::endl;
 using namespace std::literals;
 
 namespace DownloadManager {
@@ -202,7 +204,7 @@ namespace DownloadManager {
                     completed->finish();
                 }
                 catch (std::exception& e) {
-                    WHBLogPrintf("DownloadManager::Resources::process(): ERROR: %s", e.what());
+                    cerr << "DownloadManager::Resources::process(): ERROR: " << e.what() << endl;
 
                     if (completed != downloads.end())
                         completed->finish(e);
@@ -252,10 +254,11 @@ namespace DownloadManager {
 
             curl_multi_add_handle(multi, download.easy);
 
-            WHBLogPrintf("Added download:");
-            WHBLogPrintf("    %s", label.c_str());
-            WHBLogPrintf("    %s", url.c_str());
-            WHBLogPrintf("    %s", output.string().c_str());
+            cout << "Added download:"
+                 << "\n    " << label
+                 << "\n    " << url
+                 << "\n    " << output
+                 << endl;
 
             return true;
         }
@@ -332,7 +335,7 @@ namespace DownloadManager {
         TRACE_FUNC;
         assert(res);
 
-        WHBLogPrintf("Pausing %s", url.c_str());
+        cout << "Pausing " << url << endl;
     }
 
     void cancel(const std::string& url)
@@ -340,7 +343,7 @@ namespace DownloadManager {
         TRACE_FUNC;
         assert(res);
 
-        WHBLogPrintf("Canceling %s", url.c_str());
+        cout << "Canceling " << url << endl;
     }
 
     const std::vector<std::shared_ptr<const Info>>& get_infos()

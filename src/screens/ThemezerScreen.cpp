@@ -16,8 +16,6 @@
 #include <utility>
 #include <vector>
 
-#include <whb/log.h>
-
 #include <imgui.h>
 #include <imgui_raii.h>
 
@@ -38,6 +36,8 @@ using ThemezerAPI::WiiuThemeSmallVec;
 using ThemezerAPI::SortOrder;
 using ThemezerAPI::ItemSort;
 
+using std::cout;
+using std::endl;
 using namespace std::literals;
 
 namespace ThemezerScreen {
@@ -100,13 +100,13 @@ namespace ThemezerScreen {
     }
     
     void initialize(SDL_Renderer *renderer) {
-        WHBLogPrintf("Hello from ThemezerScreen init!");
+        cout << "Hello from ThemezerScreen init!" << endl;
 
         fetch_page(1);
     }
 
     void finalize() {
-        WHBLogPrintf("Hello from ThemezerScreen finalize!");
+        cout << "Hello from ThemezerScreen finalize!" << endl;
     }
 
     void show(const WiiuThemeSmall& theme) {
@@ -226,7 +226,7 @@ namespace ThemezerScreen {
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                 ImGui::InputTextWithHint("##network_search"s, "Search..."s, query);
                 if (ImGui::IsItemDeactivatedAfterEdit()) {
-                    WHBLogPrintf("Searching: %s", query.c_str());
+                    cout << "Searching: " << query << endl;
                     fetch_page(1);
                 }
             }

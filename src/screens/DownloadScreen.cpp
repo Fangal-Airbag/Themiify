@@ -9,18 +9,21 @@
 
 #include "DownloadScreen.h"
 
-#include <whb/log.h>
+#include <iostream>
 
 #include <imgui.h>
 #include <imgui_raii.h>
 
+using std::cout;
+using std::endl;
+
 namespace DownloadScreen {
     void initialize(SDL_Renderer *renderer) {
-        WHBLogPrintf("Hello from DownloadScreen init!");
+        cout << "Hello from DownloadScreen init!" << endl;
     }
 
     void finalize() {
-        WHBLogPrintf("Hello from DownloadScreen finalize!");
+        cout << "Hello from DownloadScreen finalize!" << endl;
     }
 
     void process_ui() {

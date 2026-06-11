@@ -15,11 +15,8 @@
 #include "DownloadManager.h"
 #include "utils.h"
 
+#include <iostream>
 #include <vector>
-
-#include <whb/log.h>
-#include <whb/log_udp.h>
-#include <whb/log_cafe.h>
 
 #include <coreinit/memory.h>
 
@@ -39,6 +36,10 @@
 #endif
 
 #include <curl/curl.h>
+
+using std::cout;
+using std::cerr;
+using std::endl;
 
 namespace App {
     SDL_Window *window;
@@ -110,7 +111,6 @@ namespace App {
     }
 
     void initialize() {
-        WHBLogCafeInit();
 
         curl_global_init(CURL_GLOBAL_DEFAULT);
   
@@ -127,7 +127,7 @@ namespace App {
         window = SDL_CreateWindow("Themiify", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_SHOWN);
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
-        WHBLogPrint("Hello world from Themiify!");
+        cout << "Hello world from Themiify!" << endl;
         
         initialize_imgui();
         
@@ -161,8 +161,6 @@ namespace App {
         ThemezerAPI::finalize();
 
         curl_global_cleanup();
-
-        WHBLogCafeDeinit();
     }
 
     bool run() {
@@ -173,14 +171,14 @@ namespace App {
                 ThemezerAPI::process();
             }
             catch (std::exception& e) {
-                WHBLogPrintf("ERROR in ThemezerAPI::process(): %s", e.what());
+                cerr << "ERROR in ThemezerAPI::process(): " << e.what() << endl;
             }
 
             try {
                 DownloadManager::process();
             }
             catch (std::exception& e) {
-                WHBLogPrintf("ERROR in DownloadManager::process(): %s", e.what());
+                cerr << "ERROR in DownloadManager::process(): " << e.what() << endl;
             }
             
             SDL_Event e;
@@ -188,7 +186,7 @@ namespace App {
                 ImGui_ImplSDL2_ProcessEvent(&e);
                 switch (e.type) {
                     case SDL_QUIT: { 
-                        WHBLogPrint("Quitting Themiify!");
+                        cout << "Quitting Themiify!" << endl;
                         isRunning = false;
                         break;
                     }

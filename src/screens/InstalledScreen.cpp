@@ -9,18 +9,21 @@
 
 #include "InstalledScreen.h"
 
-#include <whb/log.h>
+#include <iostream>
 
 #include <imgui.h>
 #include <imgui_raii.h>
 
+using std::cout;
+using std::endl;
+
 namespace InstalledScreen {
     void initialize(SDL_Renderer *renderer) {
-        WHBLogPrintf("Hello from InstalledScreen init!");
+        cout << "Hello from InstalledScreen init!" << endl;
     }
 
     void finalize() {
-        WHBLogPrintf("Hello from InstalledScreen finalize!");
+        cout << "Hello from InstalledScreen finalize!" << endl;
     }
 
     void process_ui() {
