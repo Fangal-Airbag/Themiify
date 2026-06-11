@@ -69,3 +69,7 @@ target_include_directories(mocha PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/libmocha/include
 )
 
+# cafe_glyphs
+add_library(cafe_glyphs INTERFACE)
+
+target_include_directories(cafe_glyphs INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/cafe_glyphs/include)

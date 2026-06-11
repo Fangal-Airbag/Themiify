@@ -51,6 +51,7 @@ add_subdirectory(external)
 
 target_link_libraries(themiify PRIVATE
     bz2
+    cafe_glyphs
     glaze
     imgui
     mocha
