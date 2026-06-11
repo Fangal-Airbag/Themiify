@@ -3,9 +3,7 @@
 #include <string>
 
 #include <imgui.h>
-#include <misc/cpp/imgui_raii.h>
-
-#include <whb/log.h>
+#include <imgui_raii.h>
 
 #include "DownloadThemePopup.h"
 #include "../DownloadManager.h"

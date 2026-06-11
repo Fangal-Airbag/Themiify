@@ -15,11 +15,8 @@
 #include "DownloadManager.h"
 #include "utils.h"
 
+#include <iostream>
 #include <vector>
-
-#include <whb/log.h>
-#include <whb/log_udp.h>
-#include <whb/log_cafe.h>
 
 #include <coreinit/memory.h>
 
@@ -30,13 +27,19 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <misc/cpp/imgui_raii.h>
-#include <misc/cpp/imgui_stdlib.h>
-#include <backends/imgui_impl_sdl2.h>
-#include <backends/imgui_impl_sdlrenderer2.h>
-#include <misc/freetype/imgui_freetype.h>
+#include <imgui_raii.h>
+#include <imgui_stdlib.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_sdlrenderer2.h>
+#ifdef IMGUI_ENABLE_FREETYPE
+#include <imgui_freetype.h>
+#endif
 
 #include <curl/curl.h>
+
+using std::cout;
+using std::cerr;
+using std::endl;
 
 namespace App {
     SDL_Window *window;
@@ -58,9 +61,11 @@ namespace App {
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
+#ifdef IMGUI_ENABLE_FREETYPE
         io.Fonts->FontLoaderFlags |= ImGuiFreeTypeLoaderFlags_LoadColor;
         io.Fonts->FontLoaderFlags |= ImGuiFreeTypeLoaderFlags_Bitmap;
-
+#endif
+        
         io.ConfigDragScroll = true;
         io.ConfigWindowsMoveFromTitleBarOnly = true;
         io.MouseDragThreshold = 25;
@@ -85,8 +90,11 @@ namespace App {
         ImFontConfig fontConfig;
         fontConfig.Flags |= ImFontFlags_NoLoadError;
         fontConfig.EllipsisChar = U'…';
-        fontConfig.GlyphOffset.y = -30 * (4.0f / 32.0f);
-
+#ifdef IMGUI_ENABLE_FREETYPE
+        // WORKAROUND: the freetype backend seems to misalign fonts merged with FontAwesome
+        fontConfig.GlyphOffset.y = -style.FontSizeBase * (1.0f / 8.0f);
+#endif
+        
         // Get Wii U System fonts.
         // Down the line move this to its own font loading function because we'll
         // be loading more fonts than just this one.
@@ -94,16 +102,15 @@ namespace App {
         uint32_t fontSize = 0;
         OSGetSharedData(OS_SHAREDDATATYPE_FONT_STANDARD, 0, &fontData, &fontSize);
 
-        io.Fonts->AddFontFromMemoryTTF(fontData, fontSize, 30, &fontConfig);
+        io.Fonts->AddFontFromMemoryTTF(fontData, fontSize, style.FontSizeBase, &fontConfig);
         fontConfig.MergeMode = true;
-        io.Fonts->AddFontFromFileTTF("fs:/vol/content/fonts/fontawesome-webfont.ttf", 30, &fontConfig);
+        io.Fonts->AddFontFromFileTTF("fs:/vol/content/fonts/fontawesome-webfont.ttf", style.FontSizeBase, &fontConfig);
 
         ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
         ImGui_ImplSDLRenderer2_Init(renderer);
     }
 
     void initialize() {
-        WHBLogCafeInit();
 
         curl_global_init(CURL_GLOBAL_DEFAULT);
   
@@ -120,7 +127,7 @@ namespace App {
         window = SDL_CreateWindow("Themiify", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_SHOWN);
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
-        WHBLogPrint("Hello world from Themiify!");
+        cout << "Hello world from Themiify!" << endl;
         
         initialize_imgui();
         
@@ -154,8 +161,6 @@ namespace App {
         ThemezerAPI::finalize();
 
         curl_global_cleanup();
-
-        WHBLogCafeDeinit();
     }
 
     bool run() {
@@ -166,14 +171,14 @@ namespace App {
                 ThemezerAPI::process();
             }
             catch (std::exception& e) {
-                WHBLogPrintf("ERROR in ThemezerAPI::process(): %s", e.what());
+                cerr << "ERROR in ThemezerAPI::process(): " << e.what() << endl;
             }
 
             try {
                 DownloadManager::process();
             }
             catch (std::exception& e) {
-                WHBLogPrintf("ERROR in DownloadManager::process(): %s", e.what());
+                cerr << "ERROR in DownloadManager::process(): " << e.what() << endl;
             }
             
             SDL_Event e;
@@ -181,7 +186,7 @@ namespace App {
                 ImGui_ImplSDL2_ProcessEvent(&e);
                 switch (e.type) {
                     case SDL_QUIT: { 
-                        WHBLogPrint("Quitting Themiify!");
+                        cout << "Quitting Themiify!" << endl;
                         isRunning = false;
                         break;
                     }

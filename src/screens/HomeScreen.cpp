@@ -9,18 +9,21 @@
 
 #include "HomeScreen.h"
 
-#include <whb/log.h>
+#include <iostream>
 
 #include <imgui.h>
-#include <misc/cpp/imgui_raii.h>
+#include <imgui_raii.h>
+
+using std::cout;
+using std::endl;
 
 namespace HomeScreen {
     void initialize(SDL_Renderer *renderer) {
-        WHBLogPrintf("Hello from HomeScreen init!");
+        cout << "Hello from HomeScreen init!" << endl;
     }
 
     void finalize() {
-        WHBLogPrintf("Hello from HomeScreen finalize!");
+        cout << "Hello from HomeScreen finalize!" << endl;
     }
 
     void process_ui() {

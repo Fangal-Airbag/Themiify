@@ -1,8 +1,7 @@
+#include <iostream>
 #include <ranges>
 #include <stdexcept>
 #include <utility>
-
-#include <whb/log.h>
 
 #include <glaze/glaze.hpp>
 
@@ -10,6 +9,9 @@
 #include "graphql.h"
 #include "tracer.hpp"
 
+using std::cout;
+using std::cerr;
+using std::endl;
 using namespace std::literals;
 
 namespace glz {
@@ -69,18 +71,17 @@ namespace ThemezerAPI {
         {
             busy = false;
 
-            WHBLogPrintf("ERROR: graphql returned errors:");
-            WHBLogPrintf("%s",
-                         glz::write<glz::opts{.prettify = true}>(errors)
+            auto msg = glz::write<glz::opts{.prettify = true}>(errors)
                              .value_or("error")
-                             .c_str());
+                             .c_str();
+            cout << "ERROR: graphql returned errors:\n" << msg << endl;
         }
 
         void common_exception_handler(const std::exception& error)
         {
             busy = false;
 
-            WHBLogPrintf("ERROR: %s", error.what());
+            cerr << "ERROR: " << error.what() << endl;
         }
 
     } // namespace
@@ -91,7 +92,7 @@ namespace ThemezerAPI {
         TRACE_FUNC;
 
         if (busy) {
-            WHBLogPrintf("ERROR: ThemezerAPI is busy");
+            cerr << "ERROR: ThemezerAPI is busy" << endl;
             return;
         }
 
@@ -178,7 +179,7 @@ query Themes($order: SortOrder, $paginationArgs: PaginationInput, $query: String
         TRACE_FUNC;
 
         if (busy) {
-            WHBLogPrintf("ERROR: ThemezerAPI is busy");
+            cerr << "ERROR: ThemezerAPI is busy" << endl;
             return;
         }
 

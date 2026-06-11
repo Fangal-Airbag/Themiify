@@ -10,10 +10,8 @@
 #include <iostream>
 
 #include <imgui.h>
-#include <misc/cpp/imgui_stdlib.h>
-#include <misc/cpp/imgui_raii.h>
-
-#include <whb/log.h>
+#include <imgui_stdlib.h>
+#include <imgui_raii.h>
 
 #include "ThemeDetailsPopup.h"
 #include "ThemePreviewPopup.h"
@@ -25,6 +23,8 @@
 #include "../ThemezerAPI.h"
 #include "../tracer.hpp"
 
+using std::cout;
+using std::endl;
 using namespace std::literals;
 
 using ThemezerAPI::WiiuThemeFull;
@@ -53,7 +53,7 @@ namespace ThemeDetailsPopup {
         ThemezerAPI::wiiu::theme(hexId,
                                  [](const WiiuThemeFull& t)
                                  {
-                                    WHBLogPrintf("Got theme!");
+                                    cout << "Got theme!" << endl;
                                     theme = t;
                                     state = State::ready;
                                  });
@@ -118,13 +118,22 @@ namespace ThemeDetailsPopup {
                 ImGui::Text(ICON_FA_TAG " %s", tag.name.data());
                 ImGui::Unindent();
                 
-                auto collageSd = ImageLoader::get(theme.collagePreview.sdUrl);
+                auto collageImg = ImageLoader::get(theme.collagePreview.sdUrl);
+                float collageWidth = 720;
                 ImGui::SetCursorPosX(
                     ImGui::GetCursorPosX() +
-                    (ImGui::GetContentRegionAvail().x - 720.0f) * 0.5f
+                    (ImGui::GetContentRegionAvail().x - collageWidth) * 0.5f
                 );
-                ImGui::Image((ImTextureID)collageSd, {720, 405});
-                
+
+                {
+                    ImGui::RAII::StyleVar no_padding{ImGuiStyleVar_FramePadding, {0.0f, 0.0f}};
+                    if (ImGui::ImageButton("collagePreviewSD",
+                                           (ImTextureID)collageImg,
+                                           {collageWidth, 405})) {
+                        ThemePreviewPopup::show(theme.launcherScreenshot.hdUrl, theme.waraWaraPlazaScreenshot.hdUrl);
+                    }
+                }
+
                 ImGui::Separator();
                 
                 if (ImGui::Button("Download")) {

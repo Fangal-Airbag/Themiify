@@ -51,6 +51,7 @@ add_subdirectory(external)
 
 target_link_libraries(themiify PRIVATE
     bz2
+    cafe_glyphs
     glaze
     imgui
     mocha
@@ -62,6 +63,7 @@ target_link_libraries(themiify PRIVATE
     PkgConfig::sdl2
     PkgConfig::SDL2_image
     PkgConfig::SDL2_mixer
+    wiiu-stdout
 )
 
 # run program using wiiload

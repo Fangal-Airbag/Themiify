@@ -69,3 +69,15 @@ target_include_directories(mocha PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/libmocha/include
 )
 
+# cafe_glyphs
+add_library(cafe_glyphs INTERFACE)
+
+target_include_directories(cafe_glyphs INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/cafe_glyphs/include)
+
+# wiiu-stdout
+add_library(wiiu-stdout STATIC
+    wiiu-stdout/cpp/wiiu-stderr.cpp
+    wiiu-stdout/cpp/wiiu-stdout.cpp
+)
+
+target_include_directories(wiiu-stdout INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/wiiu-stdout/cpp)

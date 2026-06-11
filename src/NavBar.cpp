@@ -13,9 +13,9 @@
 #include <SDL2/SDL_image.h>
 
 #include <imgui.h>
-#include <misc/cpp/imgui_stdlib.h>
-#include <misc/cpp/imgui_raii.h>
-#include <backends/imgui_impl_sdlrenderer2.h>
+#include <imgui_stdlib.h>
+#include <imgui_raii.h>
+#include <imgui_impl_sdlrenderer2.h>
 
 namespace NavBar {
     SDL_Texture *logo_tex;

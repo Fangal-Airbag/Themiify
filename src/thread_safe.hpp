@@ -1,7 +1,7 @@
 /*
  * RadiiU - an internet radio player for the Wii U.
  *
- * Copyright (C) 2025  Daniel K. O. <dkosmari>
+ * Copyright (C) 2025-2026  Daniel K. O. <dkosmari>
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -9,8 +9,8 @@
 #define THREAD_SAFE_HPP
 
 #include <mutex>
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 
 template<typename T>
@@ -24,12 +24,18 @@ public:
     template<typename U>
     class guard {
 
-        std::scoped_lock<std::mutex> guard_;
+        std::unique_lock<std::mutex> guard_;
         U* data_ = nullptr;
 
         guard(std::mutex& m,
               U* d) :
             guard_{m},
+            data_{d}
+        {}
+
+        guard(std::unique_lock<std::mutex>&& locker,
+              U* d) :
+            guard_{std::move(locker)},
             data_{d}
         {}
 
@@ -70,18 +76,26 @@ public:
             return data_;
         }
 
+        explicit
+        operator bool()
+            const noexcept
+        {
+            return guard_.owns_lock();
+        }
+
     }; // class guard
 
 
-    thread_safe() = default;
+    // thread_safe() = default;
 
 
-    template<typename U>
-    thread_safe(U&& value) :
-        data(std::forward<U>(value))
+    template<typename... Args>
+    thread_safe(Args&& ...args) :
+        data(std::forward<Args>(args)...)
     {}
 
 
+    [[nodiscard]]
     guard<T>
     lock()
         &
@@ -90,6 +104,7 @@ public:
     }
 
 
+    [[nodiscard]]
     guard<const T>
     lock()
         const &
@@ -98,6 +113,7 @@ public:
     }
 
 
+    [[nodiscard]]
     guard<const T>
     c_lock()
         const &
@@ -106,6 +122,16 @@ public:
     }
 
 
+    [[nodiscard]]
+    guard<T>
+    try_lock()
+        &
+    {
+        return {std::unique_lock{mutex, std::try_to_lock}, &data};
+    }
+
+
+    [[nodiscard]]
     T
     load()
         const &
@@ -122,6 +148,6 @@ public:
         *lock() = std::forward<U>(new_data);
     }
 
-};
+}; // class thread_safe<T>
 
 #endif
