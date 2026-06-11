@@ -9,8 +9,10 @@
 
 #pragma once
 
+#include "../ThemezerAPI.h"
+
 namespace DownloadThemePopup {
-    void show();
+    void show(const ThemezerAPI::WiiuThemeSmall &theme_data);
 
     void process_ui();
 }

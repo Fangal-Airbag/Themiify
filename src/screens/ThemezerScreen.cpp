@@ -129,19 +129,13 @@ namespace ThemezerScreen {
             ImGui::Text("Downloads: %u", theme.downloadCount);
 
             if (ImGui::Button(ICON_FA_INFO_CIRCLE " Details")) {
-                ThemeDetailsPopup::show(theme.hexId);
+                ThemeDetailsPopup::show(theme.hexId, theme);
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button(ICON_FA_DOWNLOAD " Download")) {
-                if (DownloadManager::add("Theme: " + theme.name,
-                                         theme.downloadUrl,
-                                         std::string(std::string(THEMES_ROOT) + "/" + std::string(theme.slug + ".utheme")),
-                                         {},
-                                         {})) {                        
-                }
-                DownloadThemePopup::show();
+                DownloadThemePopup::show(theme);
             }
         }
     }

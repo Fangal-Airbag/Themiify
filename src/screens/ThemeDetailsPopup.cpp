@@ -16,7 +16,8 @@
 #include "ThemeDetailsPopup.h"
 #include "ThemePreviewPopup.h"
 #include "../App.h"
-//#include "../DownloadManager.h"
+#include "../DownloadManager.h"
+#include "DownloadThemePopup.h"
 #include "../IconsFontAwesome4.h"
 #include "../ImageLoader.h"
 #include "../NavBar.h"
@@ -28,6 +29,7 @@ using std::endl;
 using namespace std::literals;
 
 using ThemezerAPI::WiiuThemeFull;
+using ThemezerAPI::WiiuThemeSmall;
 
 namespace ThemeDetailsPopup {
     enum class State {
@@ -42,14 +44,16 @@ namespace ThemeDetailsPopup {
     std::string hexId;
     std::string error;
     WiiuThemeFull theme;
+    WiiuThemeSmall smallTheme;
     const std::string popup_id = "ThemeDetailsPopup"s;
 
-    void show(const std::string& request_id) {
+    void show(const std::string& request_id, const WiiuThemeSmall &small_theme) {
         popup_queued = true;
         hexId = request_id;
         state = State::hidden;
         error.clear();
         theme = {};
+        smallTheme = small_theme;
         ThemezerAPI::wiiu::theme(hexId,
                                  [](const WiiuThemeFull& t)
                                  {
@@ -137,7 +141,7 @@ namespace ThemeDetailsPopup {
                 ImGui::Separator();
                 
                 if (ImGui::Button("Download")) {
-                    // download stuff here
+                    DownloadThemePopup::show(smallTheme);
                 }
                 
                 ImGui::SameLine();

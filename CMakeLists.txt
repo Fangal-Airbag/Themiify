@@ -14,6 +14,7 @@ add_executable(themiify
     src/byte_stream.cpp
     src/tracer.cpp
     src/humanize.cpp
+    src/installer.cpp
     src/ThemezerAPI.cpp
     src/ImageLoader.cpp
     src/DownloadManager.cpp

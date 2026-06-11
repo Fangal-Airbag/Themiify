@@ -10,9 +10,10 @@
 #pragma once
 
 #include <string>
+#include "../ThemezerAPI.h"
 
 namespace ThemeDetailsPopup {
-    void show(const std::string& request_id);
+    void show(const std::string& request_id, const ThemezerAPI::WiiuThemeSmall &small_theme);
 
     void process_ui();
 }

@@ -32,6 +32,20 @@ namespace ThemePreviewPopup {
 
     bool hide_ui;
 
+    bool dragging_preview = false;
+    float drag_start_x = 0.0f;
+
+    ImGuiIO *io = nullptr;
+    float og_min_speed;
+
+    void restore_min_speed()
+    {
+        if (io) {
+            io->DragScrollMinSpeed = og_min_speed;
+            io = nullptr;
+        }
+    }
+
     namespace {
 
         bool overlay_button(const std::string& label, const ImVec2 size) {
@@ -52,12 +66,18 @@ namespace ThemePreviewPopup {
 
         launcher_url = launcherUrl;
         waraWara_url = waraWaraUrl;
+
+        io = &ImGui::GetIO();
+        og_min_speed = io->DragScrollMinSpeed;
+        io->DragScrollMinSpeed = FLT_MAX;
     }
 
     void process_ui() {
         using namespace ImGui::RAII;
-        if (state == State::hidden)
+        if (state == State::hidden) {
+            restore_min_speed();
             return;
+        }
 
         if (popup_queued) {
             ImGui::OpenPopup(popup_id);
@@ -74,6 +94,7 @@ namespace ThemePreviewPopup {
                     ImGuiWindowFlags_NoNavInputs};
 
         if (!popup) {
+            restore_min_speed();
             state = State::hidden;
             return;
         }
@@ -108,21 +129,37 @@ namespace ThemePreviewPopup {
             float image_spacing = style.ItemSpacing.x;
             float scroll_step = image_width + image_spacing;
             float scroll_x = ImGui::GetScrollX();
-            // TODO: should only snap when both dragging and gliding stops.
-            bool should_snap = !ImGui::IsMouseDragging(ImGuiMouseButton_Left);
-            if (should_snap) {
-                float new_scroll_x = image_idx * scroll_step;
-                float diff = new_scroll_x - scroll_x;
-                if (std::abs(diff) < 16) { // arbitrary threshold of 16 pixels
-                    // Snap to the new_scroll_pos
-                    ImGui::SetScrollX(new_scroll_x);
-                } else {
-                    // Smooth out the snapping
-                    float smooth_scroll_x = std::lerp(scroll_x, new_scroll_x, 0.5f);
-                    ImGui::SetScrollX(smooth_scroll_x);
+
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                dragging_preview = true;
+                drag_start_x = ImGui::GetMousePos().x;
+            }
+
+            if (dragging_preview && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+                float drag_end_x = ImGui::GetMousePos().x;
+                float drag_delta = drag_end_x - drag_start_x;
+
+                constexpr float flick_threshold = 125.0f;
+
+                if (drag_delta < -flick_threshold && image_idx < image_idx_last) {
+                    image_idx++;
                 }
-            } else {
-                image_idx = std::lround(scroll_x / scroll_step);
+                else if (drag_delta > flick_threshold && image_idx > 0) {
+                    image_idx--;
+                }
+
+                dragging_preview = false;
+            }
+
+            // Always smoothly snap to selected image.
+            float target_scroll_x = image_idx * scroll_step;
+            float diff = target_scroll_x - scroll_x;
+
+            if (std::abs(diff) < 2.0f) {
+                ImGui::SetScrollX(target_scroll_x);
+            }
+            else {
+                ImGui::SetScrollX(std::lerp(scroll_x, target_scroll_x, 0.25f));
             }
 
             const bool is_first_image = image_idx <= 0;
@@ -160,6 +197,7 @@ namespace ThemePreviewPopup {
                 ImGui::SetCursorScreenPos({start_x, y});
 
                 if (overlay_button(CAFE_GLYPH_BTN_B " Close", button_size)) {
+                    restore_min_speed();
                     ImGui::CloseCurrentPopup();
                 }
 

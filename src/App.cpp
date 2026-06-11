@@ -20,6 +20,8 @@
 
 #include <coreinit/memory.h>
 
+#include <mocha/mocha.h>
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
 #include <SDL2/SDL_image.h>
@@ -111,7 +113,11 @@ namespace App {
     }
 
     void initialize() {
-
+        std::filesystem::create_directories(THEMIIFY_ROOT);
+        
+        Mocha_InitLibrary();
+        Mocha_MountFS("storage_mlc", nullptr, "/vol/storage_mlc01");
+        
         curl_global_init(CURL_GLOBAL_DEFAULT);
   
         ThemezerAPI::initialize(user_agent);
@@ -161,6 +167,9 @@ namespace App {
         ThemezerAPI::finalize();
 
         curl_global_cleanup();
+
+        Mocha_UnmountFS("storage_mlc");
+        Mocha_DeInitLibrary();
     }
 
     bool run() {
