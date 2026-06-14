@@ -10,10 +10,13 @@
 #pragma once
 
 #include <string>
+#include <SDL2/SDL.h>
+#include "../installer.h"
 #include "../ThemezerAPI.h"
 
 namespace ThemeDetailsPopup {
-    void show(const std::string& request_id, const ThemezerAPI::WiiuThemeSmall &small_theme);
+    void show_themezer(const std::string& request_id, const ThemezerAPI::WiiuThemeSmall &small_theme);
+    void show_local(Installer::installed_theme_data installed_theme_data, SDL_Texture *local_preview, bool is_current);
 
     void process_ui();
 }

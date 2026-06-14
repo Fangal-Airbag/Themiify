@@ -374,10 +374,15 @@ namespace Installer {
     }
 
     bool DeleteTheme(std::string modpackPath, std::string installPath) {
+        std::filesystem::path install_path = installPath;
+        // Dumb hack but I don't wanna change more stuff
+        std::filesystem::path thumbnailPath = std::string(THEMIIFY_ROOT) + "/cache/thumbnails/" + std::string(install_path.stem()) + ".webp";
+
         DeletePath(modpackPath);
         DeletePath(installPath);
+        DeletePath(thumbnailPath);
 
-        if (std::filesystem::exists(modpackPath) && std::filesystem::exists(installPath)) {
+        if (std::filesystem::exists(modpackPath) && std::filesystem::exists(installPath) && std::filesystem::exists(thumbnailPath)) {
             return false;
         }
 

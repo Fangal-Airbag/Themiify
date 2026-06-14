@@ -9,6 +9,8 @@
 
 #include "ManageThemesScreen.h"
 #include "InstallThemePopup.h"
+#include "ThemeDetailsPopup.h"
+#include "DeleteThemePopup.h"
 #include "../installer.h"
 #include "../utils.h"
 #include "../IconsFontAwesome4.h"
@@ -40,6 +42,7 @@ namespace ManageThemesScreen {
     std::vector<Installer::installed_theme_data> installed_themes;
 
     bool local_themes_refresh = true;
+    bool is_current_theme = false;
 
     SDL_Renderer *manage_renderer;
     
@@ -48,6 +51,7 @@ namespace ManageThemesScreen {
     SDL_Texture* placeholder_thumbnail = nullptr;    
 
     std::string search;
+    std::string current_theme;
 
     void scan_local_themes() {
         local_themes.clear();
@@ -124,7 +128,7 @@ namespace ManageThemesScreen {
         Child content{
             "ManageThemesContent",
             {0, 0},
-            ImGuiChildFlags_NavFlattened
+            ImGuiChildFlags_None
         };
 
         if (!content)
@@ -161,7 +165,7 @@ namespace ManageThemesScreen {
         ImGui::Spacing();
 
         switch (current_tab) {
-            case Tab::manage_installed:
+            case Tab::manage_installed: {
                 ImGui::Text("Manage your installed themes here.");
 
                 ImGui::SameLine();
@@ -181,27 +185,113 @@ namespace ManageThemesScreen {
 
                 if (local_themes_refresh) {
                     scan_installed_themes();
+                    current_theme = Installer::GetCurrentTheme();
+
+                    auto current_it = std::find_if(
+                        json_files.begin(),
+                        json_files.end(),
+                        [&](const auto& path)
+                        {
+                            Installer::installed_theme_data data;
+                            Installer::GetInstalledThemeMetadata(path, &data);
+
+                            return data.themeName + " (" + data.themeIDPath + ")" == current_theme;
+                        }
+                    );
+
+                    if (current_it != json_files.end())
+                        std::rotate(json_files.begin(), current_it, current_it + 1);
+
                     local_themes_refresh = false;
                 }
 
                 for (auto json = json_files.begin(); json != json_files.end(); ) {
                     Installer::GetInstalledThemeMetadata(*json, &theme_data);
 
+                    std::filesystem::path current_json_path = *json;
+
                     if (!std::filesystem::exists(theme_data.installedThemePath)) {
                         // Modpack doesn't exist so we should delete the json because the user "uninstalled" the theme themselves
                         DeletePath(*json);
                         json = json_files.erase(json);
                         force_refresh();
-                    }
-                    else {
-                        installed_themes.push_back(theme_data);
-                        ++json;
+                        continue;
                     }
 
-                    Child theme_frame{theme_data.themeIDPath, {0, 320}, /*ImGuiChildFlags_NavFlattened 
-                                    |*/ ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_NoSavedSettings};
+                    ++json;
+
+                    if (std::string(theme_data.themeName + " (" + theme_data.themeIDPath + ")") == current_theme) {
+                        is_current_theme = true;
+                    }
+                    else {
+                        is_current_theme = false;
+                    }
+
+                    Child theme_frame{
+                        theme_data.themeIDPath,
+                        {0, 320},
+                        ImGuiChildFlags_NavFlattened |
+                        ImGuiChildFlags_FrameStyle,
+                        ImGuiWindowFlags_NoSavedSettings
+                    };
+
                     if (!theme_frame)
-                        return;
+                        continue;
+
+                    if (is_current_theme) {
+                        auto* draw_list = ImGui::GetWindowDrawList();
+
+                        ImVec2 min = ImGui::GetWindowPos();
+                        ImVec2 max = {
+                            min.x + ImGui::GetWindowSize().x,
+                            min.y + ImGui::GetWindowSize().y
+                        };
+
+                        constexpr float rounding = 16.0f;
+
+                        draw_list->AddRect(
+                            min,
+                            max,
+                            IM_COL32(50, 220, 50, 255),
+                            rounding,
+                            ImDrawFlags_RoundCornersAll,
+                            6.0f
+                        );
+
+                        constexpr float radius = 18.0f;
+
+                        ImVec2 badge_center{
+                            max.x - radius - 12.0f,
+                            min.y + radius + 12.0f
+                        };
+
+                        draw_list->AddCircleFilled(
+                            badge_center,
+                            radius,
+                            IM_COL32(50, 220, 50, 255)
+                        );
+
+                        draw_list->AddCircle(
+                            badge_center,
+                            radius,
+                            IM_COL32(255, 255, 255, 255),
+                            0,
+                            2.0f
+                        );
+
+                        const char* star = ICON_FA_STAR;
+
+                        ImVec2 star_size = ImGui::CalcTextSize(star);
+
+                        draw_list->AddText(
+                            {
+                                badge_center.x - star_size.x * 0.5f,
+                                badge_center.y - star_size.y * 0.5f
+                            },
+                            IM_COL32(255, 255, 255, 255),
+                            star
+                        );
+                    }
 
                     std::filesystem::path thumbnailPath = std::string(std::string(THEMIIFY_ROOT) + "/cache/thumbnails/" + theme_data.themeIDPath + ".webp");
                     SDL_Texture* thumbnail = placeholder_thumbnail;
@@ -214,25 +304,35 @@ namespace ManageThemesScreen {
 
                     ImGui::SameLine();
 
+
                     {
                         Group right_group;
                         ImGui::TextWrapped("Name: %s", theme_data.themeName.c_str());
                         ImGui::TextWrapped("Author: %s", theme_data.themeAuthor.c_str());
 
                         if (ImGui::Button(ICON_FA_INFO_CIRCLE " Details")) {
-                            //ThemeDetailsPopup::show(theme.hexId, theme);
+                            ThemeDetailsPopup::show_local(theme_data, thumbnail, is_current_theme);
+                        }
+                        
+                        ImGui::SameLine();
+                        
+                        {
+                            Disabled disable_when{is_current_theme};
+                            if (ImGui::Button(ICON_FA_STAR " Make Default")) {
+                                Installer::SetCurrentTheme(theme_data.themeName, theme_data.themeIDPath);
+                                force_refresh();
+                            }
                         }
 
-                        ImGui::SameLine();
+                        ImGui::Spacing();
 
-                        if (ImGui::Button(ICON_FA_STAR " Make Default")) {
-                            //DownloadThemePopup::show(theme);
-                        }                    
+                        if (ImGui::Button(ICON_FA_TRASH " Delete")) {
+                            DeleteThemePopup::show(theme_data, current_json_path);
+                        }
                     }
                 }
-
                 break;
-
+            }
             case Tab::install_local:
                 ImGui::Text("Install .utheme files from sd:/wiiu/themes here.");
 
@@ -243,8 +343,8 @@ namespace ManageThemesScreen {
                     local_themes_refresh = false;
                 }
             
-                for (const auto& theme_path : local_themes) {
-                    std::string id = theme_path.string();
+                for (const auto& utheme_path : local_themes) {
+                    std::string id = utheme_path.string();
 
                     Child theme_frame{
                         id.c_str(),
@@ -261,30 +361,47 @@ namespace ManageThemesScreen {
 
                     ImGui::TextWrapped(
                         "%s",
-                        theme_path.filename().string().c_str()
+                        utheme_path.filename().string().c_str()
                     );
 
                     ImGui::SameLine();
 
-                    ImVec2 button_size{150.0f, 50.0f};
+                    ImVec2 install_button_size{150.0f, 50.0f};
+                    ImVec2 trash_button_size{50.0f, 50.0f};
 
-                    float button_x =
+                    float spacing = ImGui::GetStyle().ItemSpacing.x;
+
+                    float total_width =
+                        install_button_size.x +
+                        spacing +
+                        trash_button_size.x;
+
+                    float start_x =
                         ImGui::GetWindowWidth()
-                        - button_size.x
+                        - total_width
                         - ImGui::GetStyle().WindowPadding.x;
 
-                    ImGui::SetCursorPosX(button_x);
+                    ImGui::SetCursorPosX(start_x);
 
-                    if (ImGui::Button(ICON_FA_DOWNLOAD " Install", button_size)) {
+                    if (ImGui::Button(ICON_FA_DOWNLOAD " Install", install_button_size)) {
                         Installer::theme_data theme_data;
-                        Installer::GetThemeMetadata(theme_path, &theme_data);
-                        InstallThemePopup::show(theme_path, theme_data, false, true);
+                        Installer::GetThemeMetadata(utheme_path, &theme_data);
+                        InstallThemePopup::show(utheme_path, theme_data, false, true);
+                    }
+
+                    ImGui::SameLine();
+
+                    if (ImGui::Button(ICON_FA_TRASH, trash_button_size)) {
+                        DeletePath(utheme_path);
+                        force_refresh();
                     }
                 }
                 break;
         }
 
+        ThemeDetailsPopup::process_ui();
         InstallThemePopup::process_ui();
+        DeleteThemePopup::process_ui();
     }
 
 }

@@ -9,15 +9,20 @@
 
 #include <iostream>
 
+#include <SDL2/SDL.h>
+
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <imgui_raii.h>
 
 #include "ThemeDetailsPopup.h"
 #include "ThemePreviewPopup.h"
-#include "../App.h"
-#include "../DownloadManager.h"
 #include "DownloadThemePopup.h"
+#include "DeleteThemePopup.h"
+#include "ManageThemesScreen.h"
+#include "../App.h"
+#include "../installer.h"
+#include "../DownloadManager.h"
 #include "../IconsFontAwesome4.h"
 #include "../ImageLoader.h"
 #include "../NavBar.h"
@@ -35,7 +40,8 @@ namespace ThemeDetailsPopup {
     enum class State {
         hidden,
         waiting,
-        ready,
+        ready_themezer,
+        ready_local,
         error,
     };
 
@@ -45,9 +51,12 @@ namespace ThemeDetailsPopup {
     std::string error;
     WiiuThemeFull theme;
     WiiuThemeSmall smallTheme;
+    Installer::installed_theme_data installedThemeData;
+    SDL_Texture *localPreview;
     const std::string popup_id = "ThemeDetailsPopup"s;
+    bool isCurrent;
 
-    void show(const std::string& request_id, const WiiuThemeSmall &small_theme) {
+    void show_themezer(const std::string& request_id, const WiiuThemeSmall &small_theme) {
         popup_queued = true;
         hexId = request_id;
         state = State::hidden;
@@ -59,9 +68,17 @@ namespace ThemeDetailsPopup {
                                  {
                                     cout << "Got theme!" << endl;
                                     theme = t;
-                                    state = State::ready;
+                                    state = State::ready_themezer;
                                  });
         state = State::waiting;
+    }
+
+    void show_local(Installer::installed_theme_data installed_theme_data, SDL_Texture *local_preview, bool is_current) {
+        popup_queued = true;
+        installedThemeData = installed_theme_data;
+        localPreview = local_preview;
+        state = State::ready_local;
+        isCurrent = is_current;
     }
 
     void process_ui() {
@@ -95,7 +112,7 @@ namespace ThemeDetailsPopup {
             ImGui::TextWrapped("Error: %s", error.data());
             break;
             
-            case State::ready: {
+            case State::ready_themezer: {
                 ImGui::Text("Theme details");
                 ImGui::Separator();
                 
@@ -154,6 +171,50 @@ namespace ThemeDetailsPopup {
                 
                 break;
             }
+
+            case State::ready_local: {
+                ImGui::Text("Theme details");
+                ImGui::Separator();
+                
+                ImGui::TextWrapped("Name: %s", installedThemeData.themeName.c_str());
+                ImGui::TextWrapped("Author: %s", installedThemeData.themeAuthor.c_str());
+                ImGui::TextWrapped("Theme Version: %s", installedThemeData.themeVersion.c_str());
+                
+                float collageWidth = 720;
+                ImGui::SetCursorPosX(
+                    ImGui::GetCursorPosX() +
+                    (ImGui::GetContentRegionAvail().x - collageWidth) * 0.5f
+                );
+
+                {
+                    ImGui::RAII::StyleVar no_padding{ImGuiStyleVar_FramePadding, {0.0f, 0.0f}};
+                    ImGui::ImageButton("collagePreviewSD",
+                                        (ImTextureID)localPreview,
+                                        {collageWidth, 405});
+                }
+
+                ImGui::Separator();
+                
+                {
+                    ImGui::RAII::Disabled disabled_if{isCurrent};
+                    if (ImGui::Button(ICON_FA_STAR " Make Default")) {
+                        Installer::SetCurrentTheme(installedThemeData.themeName, installedThemeData.themeIDPath);
+                        ImGui::CloseCurrentPopup();
+                        ManageThemesScreen::force_refresh();
+                    }
+                }
+                
+                ImGui::SameLine();
+                
+                if (ImGui::Button(ICON_FA_TRASH " Delete")) {
+                    std::filesystem::path themeJsonPath = std::string(THEMIIFY_INSTALLED_THEMES) + "/" + installedThemeData.themeIDPath + ".json";
+                    DeleteThemePopup::show(installedThemeData, themeJsonPath);
+                }
+                
+                ImGui::Spacing();
+                
+                break;
+            }            
             
             default:
             break;

@@ -219,6 +219,7 @@ namespace InstallThemePopup {
                 if (ImGui::Button("No", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
+                    ManageThemesScreen::force_refresh();
                 }                
 
                 ImGui::Spacing();

@@ -130,7 +130,7 @@ namespace ThemezerScreen {
             ImGui::Text("Downloads: %u", theme.downloadCount);
 
             if (ImGui::Button(ICON_FA_INFO_CIRCLE " Details")) {
-                ThemeDetailsPopup::show(theme.hexId, theme);
+                ThemeDetailsPopup::show_themezer(theme.hexId, theme);
             }
 
             ImGui::SameLine();
@@ -152,9 +152,48 @@ namespace ThemezerScreen {
         {
             Font title_font{nullptr, 42};
             ImGui::AlignTextToFramePadding();
-            ImGui::Text("Themes from Themezer");
+            ImGui::Text("Browse Themezer <add icon here>");
         }
         
+        // Sort and Filter controls
+        {
+            Disabled disable_when{ThemezerAPI::is_busy()};
+
+            if (Child filter_order_search_box{"FilterOrderSearchBox", {700.0f, 75.0f}, ImGuiChildFlags_NavFlattened}) {
+                SDL_WiiUSetSWKBDHintText("Input the name of a theme to search for it...");
+                SDL_WiiUSetSWKBDOKLabel("Search");
+                SDL_WiiUSetSWKBDShowWordSuggestions(SDL_TRUE);
+                SDL_WiiUSetSWKBDHighlightInitialText(SDL_TRUE);
+                ImGui::SetNextItemWidth(350.0f);
+                ImGui::InputTextWithHint("##network_search"s, "Search..."s, query);
+                if (ImGui::IsItemDeactivatedAfterEdit()) {
+                    cout << "Searching: " << query << endl;
+                    fetch_page(1);
+                }
+
+                ImGui::SameLine();
+
+                ImGui::SetNextItemWidth(220);
+                if (Combo sort_combo{"##sort_combo"s, sort_to_label(sort)}) {
+                    for (auto new_sort : ThemezerAPI::ItemSortList) {
+                        if (ImGui::Selectable(sort_to_label(new_sort), new_sort == sort)) {
+                            sort = new_sort;
+                            fetch_page(1);
+                        }
+                    }
+                }
+
+                ImGui::SameLine();
+
+                if (ImGui::Button(order_to_label(order))) {
+                    order = order == SortOrder::ASC ? SortOrder::DESC : SortOrder::ASC;
+                    fetch_page(1);
+                }        
+            }
+        }
+
+        ImGui::SameLine();
+
         // Naviation controls
         {
             Disabled disabled_when{ThemezerAPI::is_busy()};
@@ -185,45 +224,6 @@ namespace ThemezerScreen {
                 Disabled disable_when{last_page};
                 if (ImGui::Button(ICON_FA_CHEVRON_RIGHT))
                     fetch_page(page + 1);
-            }
-        }
-
-        ImGui::SameLine();
-
-        // Sort and Filter controls
-        {
-            Disabled disable_when{ThemezerAPI::is_busy()};
-
-            if (Child filter_order_search_box{"FilterOrderSearchBox", {0.0f, 75.0f}, ImGuiChildFlags_NavFlattened}) {
-                ImGui::SetNextItemWidth(220);
-                if (Combo sort_combo{"##sort_combo"s, sort_to_label(sort)}) {
-                    for (auto new_sort : ThemezerAPI::ItemSortList) {
-                        if (ImGui::Selectable(sort_to_label(new_sort), new_sort == sort)) {
-                            sort = new_sort;
-                            fetch_page(1);
-                        }
-                    }
-                }
-
-                ImGui::SameLine();
-
-                if (ImGui::Button(order_to_label(order))) {
-                    order = order == SortOrder::ASC ? SortOrder::DESC : SortOrder::ASC;
-                    fetch_page(1);
-                }        
-                
-                ImGui::SameLine();
-
-                SDL_WiiUSetSWKBDHintText("Input the name of a theme to search for it...");
-                SDL_WiiUSetSWKBDOKLabel("Search");
-                SDL_WiiUSetSWKBDShowWordSuggestions(SDL_TRUE);
-                SDL_WiiUSetSWKBDHighlightInitialText(SDL_TRUE);
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                ImGui::InputTextWithHint("##network_search"s, "Search..."s, query);
-                if (ImGui::IsItemDeactivatedAfterEdit()) {
-                    cout << "Searching: " << query << endl;
-                    fetch_page(1);
-                }
             }
         }
 

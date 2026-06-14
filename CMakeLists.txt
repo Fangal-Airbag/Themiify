@@ -26,6 +26,7 @@ add_executable(themiify
     src/screens/ThemePreviewPopup.cpp
     src/screens/DownloadThemePopup.cpp
     src/screens/InstallThemePopup.cpp
+    src/screens/DeleteThemePopup.cpp
 )
 wut_create_rpx(themiify)
 wut_create_wuhb(themiify
