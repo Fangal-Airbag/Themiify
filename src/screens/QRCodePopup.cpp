@@ -107,14 +107,17 @@ namespace QRCodePopup {
 
                 std::string hex_id;
 
-                std::size_t start = last_qr_payload.find("/themes/");
-                if (start != std::string::npos) {
-                    start += 8; // length of "/themes/"
+                if (last_qr_payload.find("/wiiu/themes/") != std::string::npos) {
+                    std::size_t start = last_qr_payload.find("/themes/");
 
-                    std::size_t end = last_qr_payload.find('/', start);
+                    if (start != std::string::npos) {
+                        start += 8;
 
-                    if (end != std::string::npos) {
-                        hex_id = last_qr_payload.substr(start, end - start);
+                        std::size_t end = last_qr_payload.find('/', start);
+
+                        if (end != std::string::npos) {
+                            hex_id = last_qr_payload.substr(start, end - start);
+                        }
                     }
                 }
 
