@@ -1,3 +1,12 @@
+/*
+ * Themiify - A theme manager for the Nintendo Wii U
+ * Copyright (C) 2026 Fangal-Airbag  
+ * Copyright (C) 2026 AlphaCraft9658
+ * Copyright (C) 2026  Daniel K. O. <dkosmari>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include "HomeScreen.h"
 #include "SettingsScreen.h"
 #include "SettingsPopup.h"
@@ -299,5 +308,13 @@ namespace HomeScreen {
 
         ImGui::Spacing();
 
+        ImGui::Separator();
+
+        {
+            Font font_guard{nullptr, 25};
+            ImGui::Text("Themiify v%s", THEMIIFY_VERSION);
+        }
+
+        ImGui::Spacing();
     }
 }

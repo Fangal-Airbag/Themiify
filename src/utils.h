@@ -17,7 +17,7 @@
 
 #include <SDL2/SDL.h>
 
-#define THEMIIFY_VERSION "0.1"
+#define THEMIIFY_VERSION "1.0"
 
 #define THEMIIFY_ROOT "fs:/vol/external01/themiify"
 #define THEMIIFY_INSTALLED_THEMES "fs:/vol/external01/themiify/installed"
