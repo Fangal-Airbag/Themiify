@@ -15,3 +15,5 @@
 	url = https://github.com/dkosmari/wiiu-stdout.git
 [submodule "external/quirc"]
 	path = external/quirc
+[submodule "external/hips"]
+	path = external/hips
