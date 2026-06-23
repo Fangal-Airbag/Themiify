@@ -247,7 +247,6 @@ namespace ThemezerScreen {
                 ImGui::SameLine();
 
                 if (ImGui::Button(ICON_FA_QRCODE)) {
-                    cout << "Hello?" << endl;
                     QRCodePopup::show(qr_sfx);
                 }
 

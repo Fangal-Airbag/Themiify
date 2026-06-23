@@ -156,17 +156,19 @@ namespace InstallThemePopup {
             popup_queued = false;
         }
 
-        auto viewport = ImGui::GetMainViewport();
-        auto center = viewport->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, {0.5f, 0.5f});
-        ImGui::SetNextWindowSize(0.75f * viewport->Size, ImGuiCond_Appearing);
-        PopupModal popup{popup_id, nullptr,
-                         ImGuiWindowFlags_NoSavedSettings |
-                         // ImGuiWindowFlags_AlwaysAutoResize |
-                         // ImGuiWindowFlags_NoMove |
-                         // ImGuiWindowFlags_NoCollapse |
-                         // ImGuiWindowFlags_NoTitleBar |
-                         ImGuiWindowFlags_None
+        auto center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Always, {0.5f, 0.5f});
+
+        PopupModal popup{
+            popup_id,
+            nullptr,
+            ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_AlwaysAutoResize |
+            ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoScrollbar |
+            ImGuiWindowFlags_NoScrollWithMouse |
+            ImGuiWindowFlags_NoCollapse |
+            ImGuiWindowFlags_NoTitleBar
         };
 
         if (!popup) {
@@ -229,6 +231,9 @@ namespace InstallThemePopup {
                 break;
             }
             case State::installing: {
+                // Dummy to have nicer window width here
+                ImGui::SetCursorPosX(800.0f);
+                ImGui::Dummy({0.0f, 0.0f});
                 {
                     Font title_font{nullptr, 40};
                     ImGui::AlignTextToFramePadding();
@@ -281,7 +286,7 @@ namespace InstallThemePopup {
                     ImGui::Text("Installation successful!");
                 }
 
-                ImGui::TextWrapped(std::format("This file is not needed anymore: \"{}\".",
+                ImGui::TextWrapped(std::format("This file is not needed anymore:\n\"{}\".",
                                                utheme_path.filename().string()));
                 ImGui::TextWrapped("Would you like to delete it?");
 

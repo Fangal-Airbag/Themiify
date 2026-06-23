@@ -320,7 +320,9 @@ namespace HomeScreen {
         ImGui::Text(ICON_FA_MUSIC " Music:");
         ImGui::Indent();
         ImGui::BulletText("OMORI OST - 029 Good For Health, Bad for Imagination");
-        ImGui::TextLink("http://www.youtube.com/watch?v=XeK_I0XQW6U");
+        ImGui::Indent();
+        ImGui::TextLink("https://www.youtube.com/watch?v=XeK_I0XQW6U");
+        ImGui::Unindent();
         ImGui::Unindent();
 
         ImGui::Spacing();

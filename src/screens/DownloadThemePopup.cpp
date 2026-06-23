@@ -73,7 +73,7 @@ namespace DownloadThemePopup {
                          ImGuiWindowFlags_NoScrollbar |
                          ImGuiWindowFlags_NoScrollWithMouse |
                          ImGuiWindowFlags_NoCollapse |
-                         // ImGuiWindowFlags_NoTitleBar |
+                         ImGuiWindowFlags_NoTitleBar |
                          ImGuiWindowFlags_None
         };
 

@@ -256,7 +256,7 @@ namespace ManageThemesScreen {
                             installed_themes.begin(),
                             installed_themes.end(),
                             [&](const auto& data) {
-                                return data.themeName + " (" + data.themeIDPath + ")" == current_theme;
+                                return sanitize_element(data.themeName + " (" + data.themeIDPath + ")") == current_theme;
                             }
                         );
 
@@ -297,7 +297,7 @@ namespace ManageThemesScreen {
                             auto& current_json_path = json_files[index];
 
                             bool is_current_theme =
-                                theme_data.themeName + " (" + theme_data.themeIDPath + ")" == current_theme;
+                                sanitize_element(theme_data.themeName + " (" + theme_data.themeIDPath + ")") == current_theme;
 
                             Child theme_frame{
                                 theme_data.themeIDPath,
