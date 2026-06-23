@@ -73,7 +73,7 @@ namespace App {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
 
-#if 0
+#if 1
         ImGuiContext& g = *ImGui::GetCurrentContext();
         g.ConfigNavWindowingWithGamepad = false;
         g.ConfigNavWindowingKeyNext = 0;
@@ -343,7 +343,7 @@ namespace App {
             }
 
             // ImGui::ShowDemoWindow();
-            ImGui::ShowStyleEditor();
+            // ImGui::ShowStyleEditor();
 
             ImGui::EndFrame();
 
