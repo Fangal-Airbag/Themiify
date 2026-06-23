@@ -13,11 +13,14 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <iostream>
 
 #include <coreinit/cache.h>
 #include <coreinit/memdefaultheap.h>
 
-#include <whb/log.h>
+using std::cout;
+using std::cerr;
+using std::endl;
 
 namespace Camera {
     static constexpr int WIDTH  = CAMERA_WIDTH;
@@ -147,7 +150,7 @@ namespace Camera {
         );
 
         if (!gTexture) {
-            WHBLogPrintf("SDL_CreateTexture failed: %s", SDL_GetError());
+            cerr << "SDL_CreateTexture failed: " << SDL_GetError() << endl;
             return false;
         }
 

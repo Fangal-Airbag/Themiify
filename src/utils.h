@@ -9,76 +9,34 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <filesystem>
-#include <algorithm>
 
-#include <whb/log.h>
+#ifndef THEMIIFY_VERSION
+#define THEMIIFY_VERSION "?.?"
+#endif
 
-#include <SDL2/SDL.h>
 
-#define THEMIIFY_VERSION "1.0"
+inline const std::filesystem::path SD_ROOT = "fs:/vol/external01";
 
-#define THEMIIFY_ROOT "fs:/vol/external01/themiify"
-#define THEMIIFY_INSTALLED_THEMES "fs:/vol/external01/themiify/installed"
-#define THEMIIFY_THUMBNAILS "fs:/vol/external01/themiify/cache/thumbnails"
-#define THEMES_ROOT "fs:/vol/external01/wiiu/themes"
+inline const std::filesystem::path THEMIIFY_ROOT = SD_ROOT / "themiify";
+inline const std::filesystem::path THEMIIFY_INSTALLED_THEMES = THEMIIFY_ROOT / "installed";
+inline const std::filesystem::path THEMIIFY_THUMBNAILS = THEMIIFY_ROOT / "cache/thumbnails";
 
-#define WII_U_MENU_JPN_TID (0x0005001010040000)
-#define WII_U_MENU_USA_TID (0x0005001010040100)
-#define WII_U_MENU_EUR_TID (0x0005001010040200)
+inline const std::filesystem::path THEMES_ROOT = SD_ROOT / "wiiu/themes";
 
-#define MEN_PATH "Common/Package/Men.pack"
-#define MEN2_PATH "Common/Package/Men2.pack"
-#define CAFE_BARISTA_MEN_PATH "Common/Sound/Men/cafe_barista_men.bfsar"
+inline const std::filesystem::path MEN_PATH = "Common/Package/Men.pack";
+inline const std::filesystem::path MEN2_PATH = "Common/Package/Men2.pack";
+inline const std::filesystem::path CAFE_BARISTA_MEN_PATH = "Common/Sound/Men/cafe_barista_men.bfsar";
 
-inline bool CreateParentDirectories(std::string inputPath) {
-    std::filesystem::path fullPath = inputPath;
-    std::filesystem::path parentPath = fullPath.parent_path();
-        
-    if (!(std::filesystem::create_directories(parentPath))) {
-        return false;
-    }
+inline const std::uint64_t WII_U_MENU_JPN_TID = 0x00050010'10040000;
+inline const std::uint64_t WII_U_MENU_USA_TID = 0x00050010'10040100;
+inline const std::uint64_t WII_U_MENU_EUR_TID = 0x00050010'10040200;
 
-    return true;
-}
+bool CreateParentDirectories(const std::filesystem::path& inputPath);
 
-inline void DeletePath(std::string inputPath) {
-    if (!std::filesystem::exists(inputPath)) {
-        WHBLogPrintf("%s could not be found!", inputPath.c_str());
-        return;
-    }
+void DeletePath(const std::filesystem::path& inputPath);
 
-    if (std::filesystem::is_directory(inputPath)) {
-        for (const auto& entry : std::filesystem::directory_iterator(inputPath)) {
-            DeletePath(entry.path());
-            WHBLogPrintf("Successfully deleted %s", entry.path().c_str());
-        }
-    }
-    else {
-        WHBLogPrintf("Deleting %s...", inputPath.c_str());
-    }
-
-    try {
-        std::filesystem::remove(inputPath);
-    }
-    catch (const std::filesystem::filesystem_error& e) {
-        WHBLogPrintf("Error deleting... Error: %s", e.what());
-        return;
-    }
-}
-
-inline std::string removeNonASCII(std::string s) {
-    std::string str = s;
-    str.erase(std::remove_if(str.begin(), str.end(), [](unsigned char c) { return c > 127; }), str.end());
-
-    return str;
-}
-
-inline bool isAscii(std::string str) {
-    for (unsigned char c : str) {
-        if (c > 0x7F)
-            return false; // Non-ASCII byte found
-    }
-    return true;    
-}
+std::filesystem::path sanitize_element(const std::filesystem::path& input);
+std::filesystem::path sanitize(const std::filesystem::path& input);

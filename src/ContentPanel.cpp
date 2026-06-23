@@ -1,6 +1,6 @@
 /*
  * Themiify - A theme manager for the Nintendo Wii U
- * Copyright (C) 2026 Fangal-Airbag  
+ * Copyright (C) 2026 Fangal-Airbag
  * Copyright (C) 2026 AlphaCraft9658
  * Copyright (C) 2026  Daniel K. O. <dkosmari>
  *
@@ -34,19 +34,19 @@ namespace ContentPanel {
             case NavBar::Tab::home:
                 HomeScreen::process_ui();
                 break;
-            
+
             case NavBar::Tab::manage_themes:
                 ManageThemesScreen::process_ui();
                 break;
 
             case NavBar::Tab::settings:
-                SettingsScreen::process_ui();    
+                SettingsScreen::process_ui();
             break;
 
             case NavBar::Tab::themezer:
                 ThemezerScreen::process_ui();
                 break;
-            
+
             default:
                 break;
         }

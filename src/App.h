@@ -20,4 +20,6 @@ namespace App {
     void finalize();
 
     bool run();
+
+    void quit();
 }

@@ -1,6 +1,6 @@
 /*
  * Themiify - A theme manager for the Nintendo Wii U
- * Copyright (C) 2026 Fangal-Airbag  
+ * Copyright (C) 2026 Fangal-Airbag
  * Copyright (C) 2026 AlphaCraft9658
  * Copyright (C) 2026  Daniel K. O. <dkosmari>
  *
@@ -64,14 +64,15 @@ namespace SettingsPopup {
     bool dump_allmessage = false;
     bool delete_thumbnails = false;
 
-    std::string menu_content_path;
+    std::filesystem::path menu_content_path;
 
+    // TODO: clean up this worker thread mess
     std::jthread worker_thread;
     std::atomic_bool worker_done = false;
     std::atomic_bool worker_success = false;
-    std::mutex worker_mutex;    
+    std::mutex worker_mutex;
 
-    std::array<std::string, 13> all_message_szs_locations = {
+    std::array<std::filesystem::path, 13> all_message_szs_locations = {
         "UsEnglish/Message/AllMessage.szs",
         "UsFrench/Message/AllMessage.szs",
         "UsPortuguese/Message/AllMessage.szs",
@@ -85,10 +86,10 @@ namespace SettingsPopup {
         "EuRussian/Message/AllMessage.szs",
         "EuSpanish/Message/AllMessage.szs",
         "JpJapanese/Message/AllMessage.szs"
-    };  
-    
+    };
+
     struct FileIntegrityInfo {
-        std::string relative_path;
+        std::filesystem::path relative_path;
         uint32_t expected_crc;
     };
 
@@ -112,12 +113,12 @@ namespace SettingsPopup {
         {"EuSpanish/Message/AllMessage.szs",       0x89C4AA89},
 
         {"JpJapanese/Message/AllMessage.szs",      0xEEB51547}
-    }};    
+    }};
 
-    std::vector<std::string> full_all_message_paths;
-    std::vector<std::string> cache_all_message_paths;
+    std::vector<std::filesystem::path> full_all_message_paths;
+    std::vector<std::filesystem::path> cache_all_message_paths;
 
-    std::vector<std::string> modified_files;
+    std::vector<std::filesystem::path> modified_files;
 
     void start_worker(auto&& func)
     {
@@ -148,9 +149,9 @@ namespace SettingsPopup {
                 OSEnableHomeButtonMenu(TRUE);
             }
         };
-    }    
+    }
 
-    std::string GetMenuContentPath() {
+    std::filesystem::path GetMenuContentPath() {
         uint64_t menuTitleID = _SYSGetSystemApplicationTitleId(SYSTEM_APP_ID_WII_U_MENU);
 
         switch (menuTitleID) {
@@ -174,10 +175,10 @@ namespace SettingsPopup {
         char splitMenuID[18];
         snprintf(splitMenuID, sizeof(splitMenuID), "%08x/%08x", menuIDParentDir, menuIDChildDir);
 
-        return "storage_mlc:/sys/title/" + std::string(splitMenuID) + "/content/";
-    }    
+        return std::filesystem::path{"storage_mlc:/sys/title"} / splitMenuID / "content";
+    }
 
-    void CreateCacheFile(std::ifstream &sourceFile, std::string outputPath) {
+    void CreateCacheFile(std::ifstream &sourceFile, const std::filesystem::path& outputPath) {
         if (!sourceFile.is_open()) {
             cout << "Invalid or unopened source file" << endl;
             return;
@@ -208,8 +209,8 @@ namespace SettingsPopup {
         }
 
         cout << "Successfully cached file to: " << outputPath << endl;
-    }  
-    
+    }
+
     uint32_t CalculateCRC32(const std::filesystem::path& path)
     {
         std::ifstream file(path, std::ios::binary);
@@ -234,9 +235,9 @@ namespace SettingsPopup {
         }
 
         return crc;
-    }    
+    }
 
-    void show(const OpenState openState) {
+    void show(OpenState openState) {
         menu_content_path = GetMenuContentPath();
 
         full_all_message_paths.clear();
@@ -246,25 +247,25 @@ namespace SettingsPopup {
         for (const auto& path : all_message_szs_locations) {
             switch (region) {
                 case Region::USA:
-                    if (std::string_view(path).starts_with("Us")) {
-                        full_all_message_paths.push_back(menu_content_path + path);
-                        cache_all_message_paths.push_back(std::string(THEMIIFY_ROOT) + "/cache/" + path);
+                    if (path.string().starts_with("Us")) {
+                        full_all_message_paths.push_back(menu_content_path / path);
+                        cache_all_message_paths.push_back(THEMIIFY_ROOT / "cache" / path);
                     }
-                    
+
                     break;
                 case Region::EUR:
-                    if (std::string_view(path).starts_with("Eu")) {
-                        full_all_message_paths.push_back(menu_content_path + path);
-                        cache_all_message_paths.push_back(std::string(THEMIIFY_ROOT) + "/cache/" + path);
+                    if (path.string().starts_with("Eu")) {
+                        full_all_message_paths.push_back(menu_content_path / path);
+                        cache_all_message_paths.push_back(THEMIIFY_ROOT / "cache" / path);
                     }
 
                     break;
                 case Region::JPN:
-                    if (std::string_view(path).starts_with("Jp")) {
-                        full_all_message_paths.push_back(menu_content_path + path);
-                        cache_all_message_paths.push_back(std::string(THEMIIFY_ROOT) + "/cache/" + path);
+                    if (path.string().starts_with("Jp")) {
+                        full_all_message_paths.push_back(menu_content_path / path);
+                        cache_all_message_paths.push_back(THEMIIFY_ROOT / "cache" / path);
                     }
-                    
+
                     break;
                 default:
                     break;
@@ -285,10 +286,9 @@ namespace SettingsPopup {
 
                 start_worker([] {
                     for (const auto& entry : integrity_files) {
-                        std::filesystem::path full_path =
-                            menu_content_path + entry.relative_path;
+                        auto full_path = menu_content_path / entry.relative_path;
 
-                        if (!std::filesystem::exists(full_path))
+                        if (!exists(full_path))
                             continue;
 
                         uint32_t crc = CalculateCRC32(full_path);
@@ -300,8 +300,8 @@ namespace SettingsPopup {
                     }
 
                     return true;
-                });                      
-            
+                });
+
                 state = State::checking_integrity;
                 break;
             case OpenState::dump:
@@ -321,7 +321,7 @@ namespace SettingsPopup {
         using namespace ImGui::RAII;
         if (state == State::hidden)
             return;
-        
+
         if (popup_queued) {
             ImGui::OpenPopup(popup_id);
             popup_queued = false;
@@ -339,13 +339,15 @@ namespace SettingsPopup {
             return;
         }
 
+        const auto &style = ImGui::GetStyle();
+
         switch (state) {
             case State::stylmiiu_error: {
                 {
                     Font title_font{nullptr, 35};
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("StyleMiiU Not Found!");
-                } 
+                }
 
                 ImGui::Text("The StyleMiiU aroma plugin could not be found!\n\nFor your installed themes to work in the Wii U Menu " \
                             "you will need to install\nthis plugin from either the Homebrew App Store or at:\n\n" \
@@ -363,29 +365,29 @@ namespace SettingsPopup {
 
                 if (ImGui::Button("Close Themiify", button_size)) {
                     SYSLaunchMenu();
-                }    
+                }
 
                 ImGui::Spacing();
-                
-                break;                                              
+
+                break;
             }
             case State::integrity_confirmation: {
                 {
                     Font title_font{nullptr, 35};
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Check Menu Integrity Confirmation");
-                }                
+                }
 
                 ImGui::Text("Would you like to check the integrity of your Wii U Menu's\nfiles on your NAND to verify " \
                             "whether they have been modified?\n\nIf your files have been modified, Themiify will " \
                             "always fail to install themes\nuntil you either restore clean files to your NAND, or place clean files" \
                             "\nin sd:/themiify/cache.\n\nPlease check the Theme Café Docs for more info.");
-                
+
                 ImGui::Spacing();
 
                 ImVec2 button_size{250.0f, 60.0f};
 
-                float spacing = ImGui::GetStyle().ItemSpacing.x;
+                float spacing = style.ItemSpacing.x;
                 float total_width = button_size.x * 2.0f + spacing;
 
                 float start_x = (ImGui::GetContentRegionAvail().x - total_width) * 0.5f;
@@ -398,10 +400,9 @@ namespace SettingsPopup {
 
                     start_worker([] {
                         for (const auto& entry : integrity_files) {
-                            std::filesystem::path full_path =
-                                menu_content_path + entry.relative_path;
+                            auto full_path = menu_content_path / entry.relative_path;
 
-                            if (!std::filesystem::exists(full_path))
+                            if (!exists(full_path))
                                 continue;
 
                             uint32_t crc = CalculateCRC32(full_path);
@@ -413,8 +414,8 @@ namespace SettingsPopup {
                         }
 
                         return true;
-                    });                    
-                    
+                    });
+
                     state = State::checking_integrity;
                 }
 
@@ -434,10 +435,10 @@ namespace SettingsPopup {
                     Font title_font{nullptr, 35};
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Checking...");
-                }        
-                
+                }
+
                 ImGui::Text("Please wait. Do not turn off your Wii U.");
-                
+
                 if (worker_done) {
                     worker_thread = {};
                     state = worker_success
@@ -452,14 +453,14 @@ namespace SettingsPopup {
                     Font title_font{nullptr, 35};
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Integrity Checked");
-                }                
-                
+                }
+
                 if (modified_files.empty()) {
                     ImGui::Text("All your menu files are clean and ready for use with Themiify!");
                 }
                 else {
                     ImGui::Text("The following files appear to be modified: ");
-                    
+
                     ImGui::Spacing();
                     ImGui::Indent();
                     for (auto &file : modified_files) {
@@ -484,11 +485,11 @@ namespace SettingsPopup {
                 if (ImGui::Button("Close", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
-                }    
+                }
 
                 ImGui::Spacing();
-                
-                break;                  
+
+                break;
             }
             case State::dump_confirmation: {
                 {
@@ -509,7 +510,7 @@ namespace SettingsPopup {
 
                 ImVec2 button_size{210.0f, 60.0f};
 
-                float spacing = ImGui::GetStyle().ItemSpacing.x;
+                float spacing = style.ItemSpacing.x;
                 float total_width = button_size.x * 2.0f + spacing;
 
                 float start_x = (ImGui::GetContentRegionAvail().x - total_width) * 0.5f;
@@ -521,28 +522,27 @@ namespace SettingsPopup {
                     start_worker([] {
                         bool dump_success = true;
 
-                        auto dump_one = [](const std::string& src, const std::string& dst) {
+                        auto dump_one = [](const std::filesystem::path& src,
+                                           const std::filesystem::path& dst) {
                             std::ifstream file(src, std::ios::binary | std::ios::ate);
                             CreateParentDirectories(dst);
                             CreateCacheFile(file, dst);
-
-                            return std::filesystem::exists(dst)
-                                && std::filesystem::file_size(dst) > 0;
+                            return exists(dst) && file_size(dst) > 0;
                         };
 
                         dump_success &= dump_one(
-                            menu_content_path + MEN_PATH,
-                            std::string(THEMIIFY_ROOT) + "/cache/" + MEN_PATH
+                            menu_content_path / MEN_PATH,
+                            THEMIIFY_ROOT / "cache" / MEN_PATH
                         );
 
                         dump_success &= dump_one(
-                            menu_content_path + MEN2_PATH,
-                            std::string(THEMIIFY_ROOT) + "/cache/" + MEN2_PATH
+                            menu_content_path / MEN2_PATH,
+                            THEMIIFY_ROOT / "cache" / MEN2_PATH
                         );
 
                         dump_success &= dump_one(
-                            menu_content_path + CAFE_BARISTA_MEN_PATH,
-                            std::string(THEMIIFY_ROOT) + "/cache/" + CAFE_BARISTA_MEN_PATH
+                            menu_content_path / CAFE_BARISTA_MEN_PATH,
+                            THEMIIFY_ROOT / "cache" / CAFE_BARISTA_MEN_PATH
                         );
 
                         if (dump_allmessage) {
@@ -592,7 +592,7 @@ namespace SettingsPopup {
                     Font title_font{nullptr, 35};
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Dump Completed");
-                }                
+                }
 
                 ImGui::Text("The dump has been sucessfully completed\n\nYou can find your dumped files at:\n" \
                             "sd:/themiify/cache");
@@ -610,19 +610,19 @@ namespace SettingsPopup {
                 if (ImGui::Button("Close", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
-                }    
+                }
 
                 ImGui::Spacing();
-                
-                break;    
+
+                break;
             }
             case State::dump_error: {
                 {
                     Font title_font{nullptr, 35};
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Dump Error");
-                }   
-                
+                }
+
                 ImGui::Text("One or more files failed to dump correctly.");
 
                 ImGui::Spacing();
@@ -638,10 +638,10 @@ namespace SettingsPopup {
                 if (ImGui::Button("Close", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
-                }    
+                }
 
-                ImGui::Spacing();                
-                
+                ImGui::Spacing();
+
                 break;
             }
             case State::cache_confirmation: {
@@ -650,15 +650,15 @@ namespace SettingsPopup {
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Clear Cache Confirmation");
                 }
-                
+
                 ImGui::Text("Would you like to delete your Themiify cache located at:\nsd:/themiify/cache ?" \
                             "\n\nDoing so will delete all dumped Wii U Menu files");
 
                 ImGui::Checkbox("Delete theme thumbnails as well?", &delete_thumbnails);
-                
+
                 ImVec2 button_size{210.0f, 60.0f};
 
-                float spacing = ImGui::GetStyle().ItemSpacing.x;
+                float spacing = style.ItemSpacing.x;
                 float total_width = button_size.x * 2.0f + spacing;
 
                 float start_x = (ImGui::GetContentRegionAvail().x - total_width) * 0.5f;
@@ -671,20 +671,20 @@ namespace SettingsPopup {
                         if (delete_thumbnails)
                             DeletePath(THEMIIFY_THUMBNAILS);
 
-                        DeletePath(std::string(THEMIIFY_ROOT) + "/cache/Common");
+                        DeletePath(THEMIIFY_ROOT / "cache/Common");
 
                         for (const auto& path : all_message_szs_locations) {
-                            DeletePath(std::string(THEMIIFY_ROOT) + "/cache/" + path);
+                            DeletePath(THEMIIFY_ROOT / "cache" / path);
                         }
 
-                        if (delete_thumbnails && std::filesystem::exists(THEMIIFY_THUMBNAILS))
+                        if (delete_thumbnails && exists(THEMIIFY_THUMBNAILS))
                             return false;
 
-                        if (std::filesystem::exists(std::string(THEMIIFY_ROOT) + "/cache/Common"))
+                        if (exists(THEMIIFY_ROOT / "cache/Common"))
                             return false;
 
                         for (const auto& path : all_message_szs_locations) {
-                            if (std::filesystem::exists(std::string(THEMIIFY_ROOT) + "/cache/" + path))
+                            if (exists(THEMIIFY_ROOT / "cache" / path))
                                 return false;
                         }
 
@@ -699,10 +699,10 @@ namespace SettingsPopup {
                 if (ImGui::Button("Close", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
-                }    
+                }
 
                 ImGui::Spacing();
-                
+
                 break;
             }
             case State::clearing_cache: {
@@ -726,7 +726,7 @@ namespace SettingsPopup {
                     Font title_font{nullptr, 35};
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Cache Cleared");
-                }                
+                }
 
                 ImGui::Text("The Themiify cache has been succesfully cleared.");
 
@@ -743,18 +743,18 @@ namespace SettingsPopup {
                 if (ImGui::Button("Close", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
-                }    
+                }
 
                 ImGui::Spacing();
-                
-                break;                
+
+                break;
             }
             case State::cache_error: {
                 {
                     Font title_font{nullptr, 35};
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Error Clearing Cache");
-                }                     
+                }
 
                 ImGui::Text("One or more files could not be removed from the cache");
 
@@ -771,11 +771,11 @@ namespace SettingsPopup {
                 if (ImGui::Button("Close", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
-                }    
+                }
 
                 ImGui::Spacing();
-                
-                break;                     
+
+                break;
             }
             default:
                 break;

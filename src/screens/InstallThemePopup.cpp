@@ -1,6 +1,6 @@
 /*
  * Themiify - A theme manager for the Nintendo Wii U
- * Copyright (C) 2026 Fangal-Airbag  
+ * Copyright (C) 2026 Fangal-Airbag
  * Copyright (C) 2026 AlphaCraft9658
  * Copyright (C) 2026  Daniel K. O. <dkosmari>
  *
@@ -20,93 +20,176 @@
 #include "ManageThemesScreen.h"
 #include "../utils.h"
 #include "../installer.h"
+#include "../thread_safe.hpp"
 
 using std::cout;
+using std::cerr;
 using std::endl;
 using namespace std::literals;
 
 namespace InstallThemePopup {
-    enum class State {
-        hidden,
-        confirmation,
-        installing,
-        error,
-        success,
-    };
 
-    State state = State::hidden;
+    namespace {
 
-    bool popup_queued;
-    const std::string popup_id = "InstallThemePopup"s;
-    
-    std::filesystem::path utheme_path;
-    Installer::theme_data theme_data;
+        enum class State {
+            hidden,
+            confirmation,
+            start_install,
+            installing,
+            error,
+            success,
+        };
 
-    bool set_current = true;
+        std::atomic<State> state = State::hidden;
 
-    std::jthread install_thread;
-    std::atomic<bool> install_done = false;
-    std::atomic<bool> install_success = false;
-    bool install_started = false;
+        bool popup_queued;
+        const std::string popup_id = "Install Theme"s;
 
-    void show(const std::filesystem::path &uthemePath, Installer::theme_data themeData, bool confirmationCompleted, bool setCurrent) {
-        std::filesystem::create_directories(THEMES_ROOT);
+        std::filesystem::path utheme_path;
+        Installer::theme_data theme_data;
+        bool set_current = true;
+
+        std::jthread install_thread;
+        thread_safe<std::vector<std::string>> progress_messages;
+        thread_safe<std::string> error_message;
+        std::atomic_bool scroll_to_bottom;
+
+        void
+        progress_handler(const std::string& msg)
+        {
+            cout << "PROGRESS: " << msg << endl;
+            auto msgs = progress_messages.lock();
+            msgs->push_back(msg);
+            scroll_to_bottom = true;
+        }
+
+        void
+        success_handler()
+        {
+            state = State::success;
+            scroll_to_bottom = true;
+        }
+
+        void
+        error_handler(const std::exception& e)
+        {
+            cerr << "ERROR: " << e.what() << endl;
+            error_message.store(e.what());
+            state = State::error;
+            scroll_to_bottom = true;
+        }
+
+        void
+        show_messages()
+        {
+            using namespace ImGui::RAII;
+
+            // NOTE: take up all available space except for a row of buttons at the bottom.
+            // ImVec2 size{0, -ImGui::GetFrameHeightWithSpacing()};
+            const auto &style = ImGui::GetStyle();
+            ImVec2 size{0.0f, -(style.ItemSpacing.y + 60.0f)};
+            if (Child messages_box{"messages_box",
+                                   size,
+                                   ImGuiChildFlags_None,
+                                   ImGuiWindowFlags_NoSavedSettings}) {
+
+                {
+                    Font msg_font{nullptr, 24};
+                    // Show progress messages.
+                    {
+                        auto msgs = progress_messages.c_lock();
+                        if (!msgs->empty()) {
+                            for (const auto& msg : *msgs)
+                                ImGui::TextWrapped(msg);
+                            ImGui::Spacing();
+                        }
+                    }
+
+                    // Show error message.
+                    {
+                        StyleColor red_text{ImGuiCol_Text, {1.0f, 0.25f, 0.25f, 1.0f}};
+                        auto msg = error_message.lock();
+                        if (!msg->empty())
+                            ImGui::TextWrapped(*msg);
+                    }
+
+                    if (scroll_to_bottom) {
+                        ImGui::SetScrollHereY(1.0f);
+                        scroll_to_bottom = false;
+                    }
+                }
+            }
+        }
+
+    } // namespace
+
+    void show(const std::filesystem::path &uthemePath,
+              Installer::theme_data themeData,
+              bool confirmationCompleted,
+              bool setCurrent) {
+        create_directories(THEMES_ROOT);
 
         utheme_path = uthemePath;
         theme_data = themeData;
-        
+
         if (confirmationCompleted)
-            state = State::installing;
+            state = State::start_install;
         else
             state = State::confirmation;
-        
+
         set_current = setCurrent;
         popup_queued = true;
 
-        install_started = false;
-        install_done = false;
-        install_success = false;        
+        install_thread = {};
+
+        progress_messages.lock()->clear();
+        error_message.lock()->clear();
     }
 
     void process_ui() {
         using namespace ImGui::RAII;
         if (state == State::hidden)
             return;
-        
+
         if (popup_queued) {
             ImGui::OpenPopup(popup_id);
             popup_queued = false;
         }
 
-        auto center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Always, {0.5f, 0.5f});
+        auto viewport = ImGui::GetMainViewport();
+        auto center = viewport->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, {0.5f, 0.5f});
+        ImGui::SetNextWindowSize(0.75f * viewport->Size, ImGuiCond_Appearing);
+        PopupModal popup{popup_id, nullptr,
+                         ImGuiWindowFlags_NoSavedSettings |
+                         // ImGuiWindowFlags_AlwaysAutoResize |
+                         // ImGuiWindowFlags_NoMove |
+                         // ImGuiWindowFlags_NoCollapse |
+                         // ImGuiWindowFlags_NoTitleBar |
+                         ImGuiWindowFlags_None
+        };
 
-        PopupModal popup{popup_id, nullptr, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize |
-                                            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
-                                            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar};
-        
         if (!popup) {
             state = State::hidden;
+            install_thread = {};
             return;
         }
 
+        const auto &style = ImGui::GetStyle();
+
         switch (state) {
             case State::confirmation: {
-                {
-                    Font title_font{nullptr, 35};
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Install Confirmation");
-                }
 
-                ImGui::Text("Would you like to install the theme:\n%s ?", theme_data.themeName.c_str());
+                ImGui::TextWrapped("Would you like to install the theme:\n%s ?",
+                                   theme_data.themeName.c_str());
 
-                ImGui::Checkbox("Set as current StyleMiiU theme after installation", &set_current);
+                ImGui::Checkbox("Set as current theme after installation", &set_current);
 
                 ImGui::Spacing();
 
                 ImVec2 button_size{180.0f, 60.0f};
 
-                float spacing = ImGui::GetStyle().ItemSpacing.x;
+                float spacing = style.ItemSpacing.x;
                 float total_width = button_size.x * 2.0f + spacing;
 
                 float start_x = (ImGui::GetContentRegionAvail().x - total_width) * 0.5f;
@@ -114,13 +197,14 @@ namespace InstallThemePopup {
                 if (start_x > 0.0f)
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + start_x);
 
-                if (ImGui::Button("Yes", button_size)) {
-                    state = State::installing;
+                if (ImGui::Button("Install", button_size)) {
+                    state = State::start_install;
                 }
+                ImGui::SetItemDefaultFocus();
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("No", button_size)) {
+                if (ImGui::Button("Cancel", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
                 }
@@ -129,37 +213,40 @@ namespace InstallThemePopup {
 
                 break;
             }
+            case State::start_install: {
+                state = State::installing;
+                install_thread = std::jthread([](std::stop_token stopper) {
+                    Installer::InstallTheme(stopper,
+                                            utheme_path,
+                                            theme_data,
+                                            progress_handler,
+                                            success_handler,
+                                            error_handler);
+                    if (state == State::success && set_current)
+                        Installer::SetCurrentTheme(theme_data.themeName, theme_data.themeIDPath);
+                });
+
+                break;
+            }
             case State::installing: {
                 {
                     Font title_font{nullptr, 40};
                     ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Installing %s...", theme_data.themeName.c_str());
+                    ImGui::TextWrapped("Installing %s...", theme_data.themeName.c_str());
                 }
 
-                ImGui::Spacing();
+                ImGui::Separator();
 
-                ImGui::Text("This may take time, do not turn off your Wii U.");
+                ImGui::TextWrapped("This may take time, do not turn off your Wii U.");
 
-                if (!install_started) {
-                    install_started = true;
-                    install_done = false;
+                show_messages();
 
-                    install_thread = std::jthread([] {
-                        bool installSuccess = Installer::InstallTheme(utheme_path, theme_data);
-
-                        if (installSuccess && set_current)
-                            Installer::SetCurrentTheme(theme_data.themeName, theme_data.themeIDPath);
-
-                        install_success = installSuccess;
-                        install_done = true;
-                    });
-                }
-
-                if (install_done) {
+                ImVec2 button_size{180.0f, 60.0f};
+                float button_x = (ImGui::GetContentRegionAvail().x - button_size.x) * 0.5f;
+                if (button_x > 0.0f)
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + button_x);
+                if (ImGui::Button("Cancel", button_size))
                     install_thread = {};
-
-                    state = install_success ? State::success : State::error;
-                }
 
                 break;
             }
@@ -167,13 +254,10 @@ namespace InstallThemePopup {
                 {
                     Font title_font{nullptr, 50};
                     ImGui::AlignTextToFramePadding();
-                    ImGui::Text("Installation unsuccessful!");
+                    ImGui::Text("Installation failed!");
                 }
 
-                ImGui::Text("It is possible the files on your NAND have been modified.\nPlease note that Themiify requires stock files " \
-                            "to be present\non your NAND for theme installation to work.");
-
-                ImGui::Spacing();
+                show_messages();
 
                 ImVec2 button_size{180.0f, 60.0f};
 
@@ -186,11 +270,9 @@ namespace InstallThemePopup {
                 if (ImGui::Button("Close", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
-                }    
+                }
 
-                ImGui::Spacing();
-                
-                break;    
+                break;
             }
             case State::success: {
                 {
@@ -199,14 +281,15 @@ namespace InstallThemePopup {
                     ImGui::Text("Installation successful!");
                 }
 
-                ImGui::Text("To save storage space, it is recommended to delete the\n%s file.", utheme_path.filename().c_str());
-                ImGui::Text("Would you like to delete this file?");
+                ImGui::TextWrapped(std::format("This file is not needed anymore: \"{}\".",
+                                               utheme_path.filename().string()));
+                ImGui::TextWrapped("Would you like to delete it?");
 
                 ImGui::Spacing();
 
                 ImVec2 button_size{180.0f, 60.0f};
 
-                float spacing = ImGui::GetStyle().ItemSpacing.x;
+                float spacing = style.ItemSpacing.x;
                 float total_width = button_size.x * 2.0f + spacing;
 
                 float start_x = (ImGui::GetContentRegionAvail().x - total_width) * 0.5f;
@@ -214,23 +297,22 @@ namespace InstallThemePopup {
                 if (start_x > 0.0f)
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + start_x);
 
-                if (ImGui::Button("Yes", button_size)) {
+                if (ImGui::Button("Delete", button_size)) {
                     DeletePath(utheme_path);
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
                     ManageThemesScreen::force_refresh();
                 }
+                ImGui::SetItemDefaultFocus();
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("No", button_size)) {
+                if (ImGui::Button("Keep", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
                     ManageThemesScreen::force_refresh();
-                }                
+                }
 
-                ImGui::Spacing();
-                
                 break;
             }
             default:

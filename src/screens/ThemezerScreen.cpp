@@ -1,6 +1,6 @@
 /*
  * Themiify - A theme manager for the Nintendo Wii U
- * Copyright (C) 2026 Fangal-Airbag  
+ * Copyright (C) 2026 Fangal-Airbag
  * Copyright (C) 2026 AlphaCraft9658
  * Copyright (C) 2026  Daniel K. O. <dkosmari>
  *
@@ -32,6 +32,9 @@
 #include "../DownloadManager.h"
 #include "../IconsFontAwesome4.h"
 
+// Define this to help seeing the padding and spacing values for windows.
+// #define DEBUG_BG_COLOR
+
 using ThemezerAPI::PageInfo;
 using ThemezerAPI::WiiuThemeSmall;
 using ThemezerAPI::WiiuThemeSmallVec;
@@ -47,13 +50,14 @@ namespace ThemezerScreen {
     uint32_t page = 0;
 
     ItemSort sort = ItemSort::CREATED;
-    SortOrder order = SortOrder::ASC;
+    SortOrder order = SortOrder::DESC;
 
     std::string query;
 
     bool is_item_count_zero = false;
     bool fetching_theme_by_id = false;
     bool exact_id_mode = false;
+    bool scroll_to_top = false;
 
     std::optional<PageInfo> page_info;
     std::optional<WiiuThemeSmallVec> themes;
@@ -134,6 +138,7 @@ namespace ThemezerScreen {
                 themes = new_themes;
 
                 is_item_count_zero = page_info->itemCount == 0;
+                scroll_to_top = true;
             });
     }
 
@@ -195,10 +200,14 @@ namespace ThemezerScreen {
     void process_ui() {
         using namespace ImGui::RAII;
 
+#ifdef DEBUG_BG_COLOR
+        StyleColor green_bg{ImGuiCol_ChildBg, {0.0, 0.5, 0.0, 1.0}};
+#endif
         Child themezer_content{
             "ThemezerContent",
             {0, 0},
-            ImGuiChildFlags_NavFlattened
+            ImGuiChildFlags_NavFlattened |
+            ImGuiChildFlags_AlwaysUseWindowPadding
         };
 
         if (!themezer_content)
@@ -225,9 +234,7 @@ namespace ThemezerScreen {
                 SDL_WiiUSetSWKBDHighlightInitialText(SDL_TRUE);
 
                 ImGui::SetNextItemWidth(300.0f);
-                ImGui::InputTextWithHint("##network_search"s, "Search..."s, query);
-
-                if (ImGui::IsItemDeactivatedAfterEdit()) {
+                if (ImGui::InputTextWithHint("##network_search"s, "Search..."s, query)) {
                     cout << "Searching: " << query << endl;
 
                     exact_id_mode = false;
@@ -335,8 +342,15 @@ namespace ThemezerScreen {
         {
             Disabled disable_when{ThemezerAPI::is_busy()};
 
-            if (Child theme_list{"ThemeList"}) {
-                StyleVar child_border_size_style{ImGuiStyleVar_ChildBorderSize, 4.0f};
+#ifdef DEBUG_BG_COLOR
+            StyleColor brown_bg{ImGuiCol_ChildBg, {0.3, 0.3, 0.0, 1.0}};
+#endif
+            if (Child theme_list{"ThemeList", {0, 0}, ImGuiChildFlags_AlwaysUseWindowPadding}) {
+
+                if (scroll_to_top) {
+                    scroll_to_top = false;
+                    ImGui::SetScrollY(0);
+                }
 
                 if (exact_id_mode) {
                     if (fetching_theme_by_id) {

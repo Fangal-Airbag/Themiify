@@ -1,6 +1,6 @@
 /*
  * Themiify - A theme manager for the Nintendo Wii U
- * Copyright (C) 2026 Fangal-Airbag  
+ * Copyright (C) 2026 Fangal-Airbag
  * Copyright (C) 2026 AlphaCraft9658
  * Copyright (C) 2026  Daniel K. O. <dkosmari>
  *
@@ -22,7 +22,7 @@ namespace DeleteThemePopup {
     enum class State {
         hidden,
         shown,
-    };    
+    };
 
     State state;
 
@@ -31,7 +31,7 @@ namespace DeleteThemePopup {
 
     Installer::installed_theme_data installedThemeData;
     std::filesystem::path themeJsonPath;
-    
+
     void show(Installer::installed_theme_data installed_theme_data, std::filesystem::path theme_json_path) {
         popup_queued = true;
         state = State::shown;
@@ -48,7 +48,7 @@ namespace DeleteThemePopup {
             ImGui::OpenPopup(popup_id);
             popup_queued = false;
         }
-        
+
         auto center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Always, {0.5f, 0.5f});
 
@@ -58,21 +58,23 @@ namespace DeleteThemePopup {
         if (!popup) {
             state = State::hidden;
             return;
-        }                    
-                                
+        }
+
+        const auto &style = ImGui::GetStyle();
+
         {
             Font title_font{nullptr, 35};
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Delete Confirmation");
         }
 
-        ImGui::Text("Would you like to delete the theme:\n%s ?", installedThemeData.themeName.c_str());
+        ImGui::TextWrapped("Would you like to delete \"%s\"?", installedThemeData.themeName.c_str());
 
         ImGui::Spacing();
 
         ImVec2 button_size{180.0f, 60.0f};
 
-        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float spacing = style.ItemSpacing.x;
         float total_width = button_size.x * 2.0f + spacing;
 
         float start_x = (ImGui::GetContentRegionAvail().x - total_width) * 0.5f;
@@ -80,20 +82,21 @@ namespace DeleteThemePopup {
         if (start_x > 0.0f)
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + start_x);
 
-        if (ImGui::Button("Yes", button_size)) {
+        if (ImGui::Button("Delete", button_size)) {
             Installer::DeleteTheme(installedThemeData.installedThemePath, themeJsonPath);
             ManageThemesScreen::force_refresh();
             ImGui::CloseCurrentPopup();
             state = State::hidden;
         }
+        ImGui::SetItemDefaultFocus();
 
         ImGui::SameLine();
 
-        if (ImGui::Button("No", button_size)) {
+        if (ImGui::Button("Cancel", button_size)) {
             ImGui::CloseCurrentPopup();
             state = State::hidden;
         }
 
-        ImGui::Spacing();                                    
+        ImGui::Spacing();
     }
 }

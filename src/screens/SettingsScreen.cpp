@@ -1,6 +1,6 @@
 /*
  * Themiify - A theme manager for the Nintendo Wii U
- * Copyright (C) 2026 Fangal-Airbag  
+ * Copyright (C) 2026 Fangal-Airbag
  * Copyright (C) 2026 AlphaCraft9658
  * Copyright (C) 2026  Daniel K. O. <dkosmari>
  *
@@ -20,6 +20,9 @@
 
 #include <glaze/glaze.hpp>
 
+// Define this to help seeing the padding and spacing values for windows.
+// #define DEBUG_BG_COLOR
+
 using std::cout;
 using std::endl;
 
@@ -28,7 +31,7 @@ namespace SettingsScreen {
     bool isFirstBoot;
     bool checkIntegrityAtBoot;
     bool bootIntegrityCheckPending;
-    
+
     // Will expand and add more stuff
     struct Settings {
         bool is_first_boot = true;
@@ -38,25 +41,25 @@ namespace SettingsScreen {
 
     Settings settings;
 
-    const std::string settings_path = std::string(THEMIIFY_ROOT) + "/settings.json";
+    const std::filesystem::path settings_path = THEMIIFY_ROOT / "settings.json";
 
     void save_settings() {
-        std::filesystem::create_directories(THEMIIFY_ROOT);
+        create_directories(THEMIIFY_ROOT);
 
         auto json = glz::write<glz::opts{.prettify = true}>(settings);
 
         if (!json) {
-            std::cout << "Failed to serialize settings\n";
+            cout << "Failed to serialize settings" << endl;
             return;
         }
 
         std::ofstream file(settings_path, std::ios::trunc);
         if (!file.is_open()) {
-            std::cout << "Failed to open settings file\n";
+            cout << "Failed to open settings file" << endl;
             return;
         }
 
-        file << *json;        
+        file << *json;
     }
 
     void load_settings() {
@@ -70,14 +73,14 @@ namespace SettingsScreen {
         };
 
         if (auto err = glz::read_json(settings, json)) {
-            std::cout << "Failed to parse settings\n";
+            cout << "Failed to parse settings" << endl;
         }
     }
 
     bool check_is_first_boot() {
         if (settings.is_first_boot)
             return true;
-        
+
         return false;
     }
 
@@ -100,7 +103,7 @@ namespace SettingsScreen {
         SettingsPopup::show(SettingsPopup::OpenState::force_integrity);
 
         bootIntegrityCheckPending = false;
-    }    
+    }
 
     void initialize(SDL_Renderer *renderer) {
         cout << "Hello from SettingsScreen init!" << endl;
@@ -111,13 +114,8 @@ namespace SettingsScreen {
         checkIntegrityAtBoot = settings.check_integrity_at_boot;
         bootIntegrityCheckPending = settings.check_integrity_at_boot;
         volume = settings.music_volume;
-
-        Mix_Music *bgm = Mix_LoadMUS("fs:/vol/content/sound/bgm.mp3");
-        
         int mix_volume = (volume * MIX_MAX_VOLUME) / 100;
         Mix_VolumeMusic(mix_volume);
-        
-        Mix_PlayMusic(bgm, -1);
     }
 
     void finalize() {
@@ -126,22 +124,31 @@ namespace SettingsScreen {
 
     void process_ui() {
         using namespace ImGui::RAII;
-        
-        Child settings_content{"SettingsContent", {0, 0}, ImGuiChildFlags_None};
+
+#ifdef DEBUG_BG_COLOR
+        StyleColor green_bg{ImGuiCol_ChildBg, {0.0, 0.5, 0.0, 1.0}};
+#endif
+        Child settings_content{"SettingsContent", {0, 0},
+                               ImGuiChildFlags_AlwaysUseWindowPadding};
         if (!settings_content)
             return;
-        
+
         {
             Font font_guard{nullptr, 45};
             ImGui::Text("Settings");
         }
 
-        ImGui::SameLine(0, 700);
+        ImGui::SameLine();
 
         {
             Font font_guard{nullptr, 25};
-            ImGui::Text("Themiify v%s", THEMIIFY_VERSION);
-        }        
+            // Show text right-aligned.
+            std::string text = "Themiify v" THEMIIFY_VERSION;
+            auto text_size = ImGui::CalcTextSize(text);
+            auto available = ImGui::GetContentRegionAvail();
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + available.x - text_size.x);
+            ImGui::Text(text);
+        }
 
         ImGui::Separator();
 
@@ -150,7 +157,7 @@ namespace SettingsScreen {
         if (ImGui::Button("Check integrity of Wii U Menu files")) {
             SettingsPopup::show(SettingsPopup::OpenState::integrity);
         }
-        
+
         ImGui::SameLine();
 
         if (ImGui::Checkbox("Check at every boot", &checkIntegrityAtBoot)) {
@@ -178,7 +185,7 @@ namespace SettingsScreen {
         ImGui::Text("Background music volume level:");
         if (ImGui::SliderInt("##volume", &volume, 0, 100, "%d%%")) {
             settings.music_volume = volume;
-            
+
             int mix_volume = (volume * MIX_MAX_VOLUME) / 100;
             Mix_VolumeMusic(mix_volume);
 

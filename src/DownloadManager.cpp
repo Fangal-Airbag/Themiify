@@ -320,8 +320,8 @@ namespace DownloadManager {
                     return false;
             }
 
-            auto sanitized_utheme_output = removeNonASCII(std::string(utheme_output));
-            auto sanitized_thumbnail_output = removeNonASCII(std::string(thumbnail_output));
+            auto sanitized_utheme_output = sanitize(utheme_output);
+            auto sanitized_thumbnail_output = sanitize(thumbnail_output);
 
             auto info = std::make_shared<Info>(
                 label,

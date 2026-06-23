@@ -22,7 +22,6 @@
 #include <imgui_raii.h>
 
 #include <quirc.h>
-#include <whb/log.h>
 
 using std::cout;
 using std::endl;

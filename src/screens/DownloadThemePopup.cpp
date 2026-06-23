@@ -1,6 +1,6 @@
 /*
  * Themiify - A theme manager for the Nintendo Wii U
- * Copyright (C) 2026 Fangal-Airbag  
+ * Copyright (C) 2026 Fangal-Airbag
  * Copyright (C) 2026 AlphaCraft9658
  * Copyright (C) 2026  Daniel K. O. <dkosmari>
  *
@@ -37,7 +37,7 @@ namespace DownloadThemePopup {
     State state;
 
     bool popup_queued;
-    const std::string popup_id = "DownloadThemePopup"s;
+    const std::string popup_id = "Download Theme";
     std::filesystem::path utheme_path;
 
     ThemezerAPI::WiiuThemeSmall theme;
@@ -55,23 +55,34 @@ namespace DownloadThemePopup {
         using namespace ImGui::RAII;
         if (state == State::hidden)
             return;
-        
+
         if (popup_queued) {
             ImGui::OpenPopup(popup_id);
             popup_queued = false;
         }
 
-        auto center = ImGui::GetMainViewport()->GetCenter();
+        auto viewport = ImGui::GetMainViewport();
+        // WORKAROUND: setting an initial size helps with the initial position not jumping around.
+        ImGui::SetNextWindowSize(viewport->Size * 0.75f, ImGuiCond_Appearing);
+        auto center = viewport->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Always, {0.5f, 0.5f});
+        PopupModal popup{popup_id, nullptr,
+                         ImGuiWindowFlags_NoSavedSettings |
+                         ImGuiWindowFlags_AlwaysAutoResize |
+                         ImGuiWindowFlags_NoMove |
+                         ImGuiWindowFlags_NoScrollbar |
+                         ImGuiWindowFlags_NoScrollWithMouse |
+                         ImGuiWindowFlags_NoCollapse |
+                         // ImGuiWindowFlags_NoTitleBar |
+                         ImGuiWindowFlags_None
+        };
 
-        PopupModal popup{popup_id, nullptr, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize |
-                                            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
-                                            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar};
-        
         if (!popup) {
             state = State::hidden;
             return;
         }
+
+        const auto &style = ImGui::GetStyle();
 
         switch (state) {
             case State::confirmation: {
@@ -81,13 +92,13 @@ namespace DownloadThemePopup {
                     ImGui::Text("Download Confirmation");
                 }
 
-                ImGui::Text("Would you like to download the theme:\n%s ?", theme.name.c_str());
+                ImGui::TextWrapped("Would you like to download the theme:\n%s ?", theme.name.c_str());
 
                 ImGui::Spacing();
 
                 ImVec2 button_size{180.0f, 60.0f};
 
-                float spacing = ImGui::GetStyle().ItemSpacing.x;
+                float spacing = style.ItemSpacing.x;
                 float total_width = button_size.x * 2.0f + spacing;
 
                 float start_x = (ImGui::GetContentRegionAvail().x - total_width) * 0.5f;
@@ -95,22 +106,23 @@ namespace DownloadThemePopup {
                 if (start_x > 0.0f)
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + start_x);
 
-                if (ImGui::Button("Yes", button_size)) {
+                if (ImGui::Button("Download", button_size)) {
                     if (DownloadManager::add("Theme: " + theme.name,
-                                            theme.downloadUrl,
-                                            theme.collagePreview.thumbUrl,
-                                            std::string(std::string(THEMES_ROOT) + "/" + std::string(theme.slug + ".utheme")),
-                                            std::string(std::string(THEMIIFY_THUMBNAILS) + "/" + std::string("Themezer" + theme.hexId + ".webp")),
-                                            {},
-                                            {})) {
+                                             theme.downloadUrl,
+                                             theme.collagePreview.thumbUrl,
+                                             THEMES_ROOT / (theme.slug + ".utheme"),
+                                             THEMIIFY_THUMBNAILS / ("Themezer" + theme.hexId + ".webp"),
+                                             {},
+                                             {})) {
                     }
 
                     state = State::downloading;
                 }
+                ImGui::SetItemDefaultFocus();
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("No", button_size)) {
+                if (ImGui::Button("Cancel", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
                 }
@@ -127,22 +139,22 @@ namespace DownloadThemePopup {
                 auto& info = infos.at(0);
 
                 utheme_path = info->utheme_output;
-                
+
                 {
                     Font title_font{nullptr, 35};
                     ImGui::AlignTextToFramePadding();
                     ImGui::Text("Downloading Theme...");
                 }
-                
+
                 ImGui::Text(info->label);
-                
+
                 ImGui::Text(info->utheme_url);
-                
-                ImGui::Text("Saving to: %s", info->utheme_output.filename().c_str());
-                
+
+                ImGui::TextWrapped("Saving to: %s", info->utheme_output.filename().c_str());
+
                 //auto speed = humanize::value_bin(info->speed) + "B/s";
                 //ImGui::Text("DL speed: %s", speed.data());
-                
+
                 ImGui::ProgressBar(info->progress);
 
                 if (info->progress >= 1.0f) {
@@ -162,15 +174,15 @@ namespace DownloadThemePopup {
                     ImGui::Text("Download successful!");
                 }
 
-                ImGui::Text("Would you like to now install this theme for use with the\nStyleMiiU plugin?");
+                ImGui::TextWrapped("Would you like to install this theme for StyleMiiU plugin?");
 
-                ImGui::Checkbox("Set as current StyleMiiU theme after installation", &set_current);
+                ImGui::Checkbox("Set as current theme", &set_current);
 
                 ImGui::Spacing();
 
                 ImVec2 button_size{180.0f, 60.0f};
 
-                float spacing = ImGui::GetStyle().ItemSpacing.x;
+                float spacing = style.ItemSpacing.x;
                 float total_width = button_size.x * 2.0f + spacing;
 
                 float start_x = (ImGui::GetContentRegionAvail().x - total_width) * 0.5f;
@@ -178,7 +190,7 @@ namespace DownloadThemePopup {
                 if (start_x > 0.0f)
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + start_x);
 
-                if (ImGui::Button("Yes", button_size)) {
+                if (ImGui::Button("Install", button_size)) {
                     Installer::theme_data theme_data;
                     Installer::GetThemeMetadata(utheme_path, &theme_data);
 
@@ -187,16 +199,17 @@ namespace DownloadThemePopup {
 
                     InstallThemePopup::show(utheme_path, theme_data, true, set_current);
                 }
+                ImGui::SetItemDefaultFocus();
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("No", button_size)) {
+                if (ImGui::Button("Cancel", button_size)) {
                     ImGui::CloseCurrentPopup();
                     state = State::hidden;
                 }
 
                 ImGui::Spacing();
-                
+
                 break;
             }
             default:

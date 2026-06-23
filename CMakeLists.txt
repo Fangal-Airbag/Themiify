@@ -2,6 +2,7 @@ include(/opt/devkitpro/cmake/WiiU.cmake)
 cmake_minimum_required(VERSION 3.16)
 
 project(themiify C CXX)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -13,6 +14,7 @@ add_executable(themiify
     src/graphql.cpp
     src/byte_stream.cpp
     src/tracer.cpp
+    src/utils.cpp
     src/humanize.cpp
     src/installer.cpp
     src/ThemezerAPI.cpp
@@ -75,6 +77,8 @@ target_link_libraries(themiify PRIVATE
     PkgConfig::SDL2_image
     PkgConfig::SDL2_mixer
 )
+
+target_compile_definitions(themiify PRIVATE THEMIIFY_VERSION="1.0")
 
 # run program using wiiload
 

@@ -1,6 +1,6 @@
 /*
  * Themiify - A theme manager for the Nintendo Wii U
- * Copyright (C) 2026 Fangal-Airbag  
+ * Copyright (C) 2026 Fangal-Airbag
  * Copyright (C) 2026 AlphaCraft9658
  * Copyright (C) 2026  Daniel K. O. <dkosmari>
  *
@@ -28,7 +28,11 @@
 #include <mocha/mocha.h>
 
 using std::cout;
+using std::cerr;
 using std::endl;
+
+// Define this to help seeing the padding and spacing values for windows.
+// #define DEBUG_BG_COLOR
 
 namespace HomeScreen {
     SDL_Renderer *home_renderer = nullptr;
@@ -44,7 +48,7 @@ namespace HomeScreen {
     SDL_Texture *current_theme_thumbnail = nullptr;
 
     bool current_theme_refresh = true;
-    
+
     bool isFirstBoot = true;
     bool styleMiiUExists = true;
     bool queueStyleMiiUPrompt = false;
@@ -85,12 +89,10 @@ namespace HomeScreen {
         current_theme_id_path = get_theme_id(current_theme_str);
 
         current_theme_json_path =
-            std::string(THEMIIFY_INSTALLED_THEMES) + "/" +
-            current_theme_id_path + ".json";
+            THEMIIFY_INSTALLED_THEMES / (current_theme_id_path + ".json");
 
         current_theme_thumbnail_path =
-            std::string(THEMIIFY_THUMBNAILS) + "/" +
-            current_theme_id_path + ".webp";
+            THEMIIFY_THUMBNAILS / (current_theme_id_path + ".webp");
 
         int res = Installer::GetInstalledThemeMetadata(
             current_theme_json_path,
@@ -114,14 +116,15 @@ namespace HomeScreen {
 
         MochaUtilsStatus res;
         if ((res = Mocha_GetEnvironmentPath(environmentPathBuffer, sizeof(environmentPathBuffer))) != MOCHA_RESULT_SUCCESS) {
-            WHBLogPrintf("Failed to get environment path. Are you running on Aroma? Result: %s", Mocha_GetStatusStr(res));
+            cerr << "Failed to get environment path. Are you running on Aroma? Result: "
+                 << Mocha_GetStatusStr(res) << endl;
             return false;
         }
 
         if (std::filesystem::exists(std::string(environmentPathBuffer) + "/plugins/stylemiiu.wps"))
             return true;
 
-        return false;        
+        return false;
     }
 
     void initialize(SDL_Renderer *renderer) {
@@ -137,7 +140,7 @@ namespace HomeScreen {
         styleMiiUExists = check_stylemiiu_exists();
         if (!styleMiiUExists)
             queueStyleMiiUPrompt = true;
-        
+
         cout << "styleMiiUExists: " << styleMiiUExists << endl;
 
         isFirstBoot = SettingsScreen::check_is_first_boot();
@@ -152,34 +155,47 @@ namespace HomeScreen {
         }
 
         thumbnail_cache.clear();
-        
+
         if (placeholder_thumbnail) {
             SDL_DestroyTexture(placeholder_thumbnail);
             placeholder_thumbnail = nullptr;
         }
-        
+
         if (themiify_logo) {
             SDL_DestroyTexture(themiify_logo);
             themiify_logo = nullptr;
         }
     }
-    
+
     void process_ui() {
         using namespace ImGui::RAII;
-        
-        Child home_content{"HomeContent", {0, 0}, ImGuiChildFlags_None};
+
+        const auto &style = ImGui::GetStyle();
+#ifdef DEBUG_BG_COLOR
+        StyleColor blue_bg{ImGuiCol_ChildBg, {0.0, 0.5, 0.0, 1.0}};
+#endif
+        Child home_content{"HomeContent", {0, 0}, ImGuiChildFlags_AlwaysUseWindowPadding};
         if (!home_content)
             return;
-            
+
         if (current_theme_refresh)
             refresh_current_theme();
-        
-        if (themiify_logo)
-            ImGui::Image((ImTextureID)themiify_logo, {520, 124}); 
-        
+
+        if (themiify_logo) {
+
+            ImGui::Image((ImTextureID)themiify_logo, {520, 124});
+
+            ImGui::SameLine();
+
+            {
+                Font font_guard{nullptr, 25};
+                ImGui::Text("v%s", THEMIIFY_VERSION);
+            }
+        }
+
         {
             Font font_guard{nullptr, 55};
-            
+
             // Cute lil thing cause why not?
             isFirstBoot ? ImGui::Text("Welcome!") : ImGui::Text("Welcome back!");
         }
@@ -188,15 +204,24 @@ namespace HomeScreen {
             SettingsPopup::show(SettingsPopup::OpenState::stylemiiu);
             queueStyleMiiUPrompt = false;
         }
-        
+
         if (styleMiiUExists) {
             // For checking integrity at boot
             SettingsScreen::run_first_boot_check();
             SettingsScreen::run_boot_integrity_check();
         }
-        
+
         SettingsPopup::process_ui();
-        
+
+#ifdef DEBUG_BG_COLOR
+        StyleColor brown_bg{ImGuiCol_ChildBg, {0.3, 0.3, 0.0, 1.0}};
+#endif
+        Child scrollable_content{"scrollable_content", {0, 0},
+                                 ImGuiChildFlags_AlwaysUseWindowPadding};
+        if (!scrollable_content)
+            return;
+
+
         ImGui::Spacing();
 
         {
@@ -221,7 +246,7 @@ namespace HomeScreen {
                     ImGuiChildFlags_FrameStyle,
                     ImGuiWindowFlags_NoSavedSettings
                 };
-                
+
                 ImGui::Image((ImTextureID)current_theme_thumbnail, {426, 240});
 
                 ImGui::SameLine();
@@ -231,25 +256,30 @@ namespace HomeScreen {
 
                     {
                         Font font_guard{nullptr, 30};
-                        ImGui::TextWrapped("%s", current_theme_data.themeName.c_str());
+                        ImGui::TextWrapped(current_theme_data.themeName);
                         ImGui::TextWrapped("by: %s", current_theme_data.themeAuthor.c_str());
                     }
                 }
             }
-            
+
             ImGui::Unindent(140);
         }
 
 
-        if (ImGui::Button("Download Themezer Themes"))
-        NavBar::set_current_tab(NavBar::Tab::themezer);
-        
-        ImGui::SameLine();
-        ImGui::Dummy(ImVec2(50.0f, 0.0f));
+        if (ImGui::Button("Download Themes"))
+            NavBar::set_current_tab(NavBar::Tab::themezer);
+
         ImGui::SameLine();
 
-        if (ImGui::Button("Manage Your Installed Themes"))
-            NavBar::set_current_tab(NavBar::Tab::manage_themes);
+        {
+            // align next button to the right
+            auto available = ImGui::GetContentRegionAvail();
+            std::string label = "Manage Installed Themes";
+            ImVec2 button_size = ImGui::CalcTextSize(label) + 2 * style.FramePadding;
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + available.x - button_size.x);
+            if (ImGui::Button(label, button_size))
+                NavBar::set_current_tab(NavBar::Tab::manage_themes);
+        }
 
         ImGui::Spacing();
         ImGui::Separator();
@@ -258,64 +288,60 @@ namespace HomeScreen {
             Font font_guard{nullptr, 45};
             ImGui::Text("Credits:");
         }
-        
+
         ImGui::Spacing();
 
         ImGui::Text(ICON_FA_CODE " Developers:");
         ImGui::Indent();
-        ImGui::Text("• Fangal-Airbag\n• AlphaCraft9658\n• Daniel K. O. (dkosmari)");
+        ImGui::BulletText("Fangal-Airbag");
+        ImGui::BulletText("AlphaCraft9658");
+        ImGui::BulletText("Daniel K. O. (dkosmari)");
         ImGui::Unindent();
-        
+
         ImGui::Spacing();
 
         ImGui::Text(ICON_FA_PAINT_BRUSH " UI Design:");
         ImGui::Indent();
-        ImGui::Text("• Perrohuevo\n• dewgong\n• Daniel K. O. (dkosmari)");
+        ImGui::BulletText("Perrohuevo");
+        ImGui::BulletText("dewgong");
+        ImGui::BulletText("Daniel K. O. (dkosmari)");
         ImGui::Unindent();
-        
+
         ImGui::Spacing();
-        
+
         ImGui::Text(ICON_FA_FONT " Fonts:");
         ImGui::Indent();
-        ImGui::Text("• Wii U System Font\n• FontAwesome");
+        ImGui::BulletText("Wii U System Font");
+        ImGui::BulletText("FontAwesome");
         ImGui::Unindent();
-        
+
         ImGui::Spacing();
-        
+
         ImGui::Text(ICON_FA_MUSIC " Music:");
         ImGui::Indent();
-        ImGui::Text("• OMORI OST - 029 Good For Health, Bad for Imagination" \
-                    "\n  Link: www.youtube.com/watch?v=XeK_I0XQW6U");
+        ImGui::BulletText("OMORI OST - 029 Good For Health, Bad for Imagination");
+        ImGui::TextLink("http://www.youtube.com/watch?v=XeK_I0XQW6U");
         ImGui::Unindent();
 
         ImGui::Spacing();
 
         ImGui::Text(ICON_FA_GITHUB " GitHub:");
         ImGui::Indent();
-        ImGui::Text("• github.com/Fangal-Airbag/Themiify");
+        ImGui::Bullet();
+        ImGui::TextLink("https://github.com/Themiify-hb/Themiify");
         ImGui::Unindent();
-        
+
         ImGui::Spacing();
 
         ImGui::Text(ICON_FA_STAR " Special thanks:");
         ImGui::Indent();
-        ImGui::Text("• Juanen100 for the StyleMiiU Aroma Plugin!" \
-                    "\n• The Theme Café Discord mods, devs and founders!" \
-                    "\n• Gatto for the incredible Theme Café docs!" \
-                    "\n• Migush and the whole Themezer team!" \
-                    "\n• All the amazing Wii U theme creators!" \
-                    "\n• And many more!");
+        ImGui::BulletText("Juanen100 for the StyleMiiU Aroma Plugin!");
+        ImGui::BulletText("The Theme Café Discord mods, devs and founders!");
+        ImGui::BulletText("Gatto for the incredible Theme Café docs!");
+        ImGui::BulletText("Migush and the whole Themezer team!");
+        ImGui::BulletText("All the amazing Wii U theme creators!");
+        ImGui::BulletText("And many more!");
         ImGui::Unindent();
 
-        ImGui::Spacing();
-
-        ImGui::Separator();
-
-        {
-            Font font_guard{nullptr, 25};
-            ImGui::Text("Themiify v%s", THEMIIFY_VERSION);
-        }
-
-        ImGui::Spacing();
     }
 }
