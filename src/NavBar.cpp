@@ -110,7 +110,17 @@ namespace NavBar {
 
         ImGui::Image(logo_tex, {152.4f, 138.0f});
 
+        const auto &style = ImGui::GetStyle();
+        const auto available = ImGui::GetContentRegionAvail();
+        const int num_buttons = 5;
         const ImVec2 button_size = {148, 96};
+        const float total_empty =
+            available.y
+            - num_buttons * button_size.y
+            - style.SeparatorSize;
+        const float spacing = total_empty / num_buttons;
+
+        StyleVar button_spacing{ImGuiStyleVar_ItemSpacing, {0, spacing}};
 
 #ifdef DEBUG_BG_COLOR
         StyleColor buttons_box_bg{ImGuiCol_ChildBg, {0.0f, 0.5f, 0.0f, 1.0f}};
@@ -120,7 +130,8 @@ namespace NavBar {
                 ImGui::ImageButton("home_button_active", home_button_active_tex, button_size);
             }
             else {
-                // Implement the App::ImageButton overload in the App namespace to add the sound effect and rumble when clicked
+                // TODO: Implement the App::ImageButton overload in the App namespace to
+                // add the sound effect and rumble when clicked
                 if (ImGui::ImageButton("home_button_normal", home_button_normal_tex, button_size)) {
                     current_tab = Tab::home;
                     HomeScreen::force_refresh();
@@ -155,9 +166,8 @@ namespace NavBar {
                 }
             }
 
-            // Place the exit button at the bottom.
-            auto available = ImGui::GetContentRegionAvail();
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + available.y - button_size.y);
+            ImGui::Separator();
+
             if (ImGui::ImageButton("exit_button_normal", exit_button_normal_tex, button_size)) {
                 App::quit();
             }

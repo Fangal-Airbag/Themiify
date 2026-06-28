@@ -162,7 +162,7 @@ namespace ThemeDetailsPopup {
                     DeleteThemePopup::show(installedThemeData, themeJsonPath);
                 }
 
-                if (ImGui::Button("Close", {-1, 0}))
+                if (ImGui::Button(ICON_FA_TIMES " Close", {-1, 0}))
                     ImGui::CloseCurrentPopup();
             }
         }
@@ -224,7 +224,7 @@ namespace ThemeDetailsPopup {
                         ImGuiChildFlags_NavFlattened}) {
 
             // Calculate how much space is needed for the buttons at the bottom.
-            const int num_buttons = 2;
+            const int num_buttons = 3;
             const float buttons_height = num_buttons * ImGui::GetFrameHeightWithSpacing();
 
             // Put content in a scrollable child window.
@@ -251,11 +251,19 @@ namespace ThemeDetailsPopup {
                 }
             }
 
-            if (ImGui::Button("Download", {-1, 0}))
+            if (ImGui::Button(ICON_FA_DOWNLOAD " Download", {-1, 0}))
                 DownloadThemePopup::show(smallTheme);
             ImGui::SetItemDefaultFocus();
 
-            if (ImGui::Button("Close", {-1, 0}))
+            if (ImGui::Button(ICON_FA_EYE " Preview", {-1,0}))
+                ThemePreviewPopup::show(theme.hexId,
+                                        {
+                                            theme.collagePreview.hdUrl,
+                                            theme.launcherScreenshot.hdUrl,
+                                            theme.waraWaraPlazaScreenshot.hdUrl
+                                        });
+
+            if (ImGui::Button(ICON_FA_TIMES " Close", {-1, 0}))
                 ImGui::CloseCurrentPopup();
         }
     }
