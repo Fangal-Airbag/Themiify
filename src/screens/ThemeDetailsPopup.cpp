@@ -147,7 +147,7 @@ namespace ThemeDetailsPopup {
 
                 {
                     Disabled disabled_if{isCurrent};
-                    if (ImGui::Button(ICON_FA_STAR " Make Default", {-1, 0})) {
+                    if (ImGui::Button(ICON_FA_STAR " Apply Theme", {-1, 0})) {
                         Installer::SetCurrentTheme(installedThemeData.themeName,
                                                    installedThemeData.themeIDPath);
                         ImGui::CloseCurrentPopup();
@@ -156,7 +156,7 @@ namespace ThemeDetailsPopup {
                     ImGui::SetItemDefaultFocus();
                 }
 
-                if (ImGui::Button(ICON_FA_TRASH " Delete", {-1,0})) {
+                if (ImGui::Button(ICON_FA_TRASH " Delete", {-1, 0})) {
                     auto themeJsonPath =
                         THEMIIFY_INSTALLED_THEMES / (installedThemeData.themeIDPath + ".json");
                     DeleteThemePopup::show(installedThemeData, themeJsonPath);
@@ -252,10 +252,10 @@ namespace ThemeDetailsPopup {
             }
 
             if (ImGui::Button(ICON_FA_DOWNLOAD " Download", {-1, 0}))
-                DownloadThemePopup::show(smallTheme);
+                DownloadThemePopup::open(smallTheme);
             ImGui::SetItemDefaultFocus();
 
-            if (ImGui::Button(ICON_FA_EYE " Preview", {-1,0}))
+            if (ImGui::Button(ICON_FA_EYE " Preview", {-1, 0}))
                 ThemePreviewPopup::show(theme.hexId,
                                         {
                                             theme.collagePreview.hdUrl,

@@ -246,7 +246,6 @@ namespace HomeScreen {
                 NavBar::set_current_tab(NavBar::Tab::manage_themes);
         }
 
-        ImGui::Spacing();
         ImGui::Separator();
 
         {

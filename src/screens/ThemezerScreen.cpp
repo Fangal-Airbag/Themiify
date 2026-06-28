@@ -176,7 +176,7 @@ namespace ThemezerScreen {
             ThemeDetailsPopup::open_themezer(theme.hexId, theme);
         }
 
-        // NOTE: when hovered or activated, change the text color to the background color.
+        // NOTE: when hovered or activated, change the text color to the window bg color.
         std::optional<StyleColor> dark_text;
         if (ImGui::IsItemHovered() || ImGui::IsItemActive()) {
             const auto& colors = style.Colors;
@@ -195,11 +195,11 @@ namespace ThemezerScreen {
 
         {
             Font font{nullptr, 24};
-            ImGui::TextAligned(0.0f, inner_size.x, "%s", theme.name.data());
+            ImGui::TextAligned(0.0f, inner_size.x, theme.name);
         }
 
         {
-            // Show author aligned to the left, downloads to the right, on the same line.
+            // Show author aligned to the left, downloads to the right.
             Font font{nullptr, 18};
             std::string downloads_label = ICON_FA_DOWNLOAD " "
                 + std::to_string(theme.downloadCount);
@@ -250,7 +250,7 @@ namespace ThemezerScreen {
                         SDL_WiiUSetSWKBDOKLabel("Search");
                         SDL_WiiUSetSWKBDHighlightInitialText(SDL_TRUE);
 
-                        ImGui::SetNextItemWidth(300.0f);
+                        ImGui::SetNextItemWidth(280);
                         if (ImGui::InputTextWithHint("##network_search"s, "Search..."s, query)) {
                             cout << "Searching: " << query << endl;
 
@@ -368,7 +368,7 @@ namespace ThemezerScreen {
                             ImGui::SetScrollY(0);
                         }
 
-                        const ImVec2 inner_size = {320, 250};
+                        const ImVec2 inner_size = {320, 260};
                         const ImVec2 padding = {12, 12};
 
                         if (exact_id_mode) {
